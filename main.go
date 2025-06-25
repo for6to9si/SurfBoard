@@ -1,18 +1,19 @@
 package main
 
 import (
-	"SurfBoard/locale"
 	"context"
 	"fmt"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"os"
 
 	"github.com/mymmrac/telego"
-
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 )
 
 func main() {
+	initI18n() // 📌 Инициализация i18n
+
 	ctx := context.Background()
 	botToken := os.Getenv("TOKEN")
 
@@ -27,36 +28,47 @@ func main() {
 	defer func() { _ = bh.Stop() }()
 
 	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
-		lang := locale.NormalizeLang(message.From.LanguageCode)
+		loc := localizer(message.From.LanguageCode)
 
-		_, _ = bot.SendMessage(ctx, tu.Messagef(
-			tu.ID(message.Chat.ID),
-			locale.T(lang, "welcome"), message.From.FirstName,
+		welcome, _ := loc.Localize(&i18n.LocalizeConfig{
+			MessageID: "welcome",
+			TemplateData: map[string]string{
+				"Name": message.From.FirstName,
+			},
+		})
+		currentVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "current_vpn"})
+		allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
+		addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
+
+		_, _ = bot.SendMessage(ctx, tu.Message(
+			tu.ID(message.Chat.ID), welcome,
 		).WithReplyMarkup(tu.InlineKeyboard(
-			tu.InlineKeyboardRow(tu.InlineKeyboardButton(locale.T(lang, "current_vpn")).WithCallbackData("current_vpn")),
-			tu.InlineKeyboardRow(tu.InlineKeyboardButton(locale.T(lang, "all_vpns")).WithCallbackData("all_vpns")),
-			tu.InlineKeyboardRow(tu.InlineKeyboardButton(locale.T(lang, "add_vpn")).WithCallbackData("add_vpn")),
+			tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("current_vpn")),
+			tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")),
+			tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")),
 		)))
 		return nil
 	}, th.CommandEqual("start"))
 
 	bh.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
-		lang := locale.NormalizeLang(query.From.LanguageCode)
+		loc := localizer(query.From.LanguageCode)
 
 		var response string
 		switch query.Data {
 		case "current_vpn":
-			response = getCurrentVPN() // Замените на вашу логику
+			response = getCurrentVPN()
 		case "all_vpns":
-			response = listAllVPNs() // Замените на вашу логику
+			response = listAllVPNs()
 		case "add_vpn":
-			response = addNewVPN() // Замените на вашу логику
+			response = addNewVPN()
 		default:
-			response = locale.T(lang, "go_response")
+			response, _ = loc.LocalizeMessage(&i18n.Message{ID: "go_response"})
 		}
 
+		done, _ := loc.LocalizeMessage(&i18n.Message{ID: "done"})
+
 		_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), response))
-		_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID).WithText(locale.T(lang, "done")))
+		_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID).WithText(done))
 
 		return nil
 	}, th.AnyCallbackQueryWithMessage())
@@ -64,7 +76,7 @@ func main() {
 	_ = bh.Start()
 }
 
-// 🔻 Заглушки (замените на вашу VPN-логику)
+// 🧩 Заглушки под VPN-логику
 func getCurrentVPN() string {
 	return "[Информация о текущем VPN]"
 }

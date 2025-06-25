@@ -1,0 +1,17 @@
+[welcome]
+other = "Привет, {{.Name}}!"
+
+[current_vpn]
+other = "Посмотреть текущий VPN"
+
+[all_vpns]
+other = "Посмотреть все VPN"
+
+[add_vpn]
+other = "Добавить новый VPN"
+
+[done]
+other = "Готово"
+
+[go_response]
+other = "ПОЕХАЛИ"

@@ -3,8 +3,10 @@ module SurfBoard
 go 1.24
 
 require (
-	github.com/go-playground/locales v0.14.1
+	github.com/BurntSushi/toml v1.5.0
 	github.com/mymmrac/telego v1.0.2
+	github.com/nicksnyder/go-i18n/v2 v2.6.0
+	golang.org/x/text v0.23.0
 )
 
 require (

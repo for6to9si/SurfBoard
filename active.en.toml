@@ -1,0 +1,17 @@
+[welcome]
+other = "Hello {{.Name}}!"
+
+[current_vpn]
+other = "Current VPN"
+
+[all_vpns]
+other = "All VPNs"
+
+[add_vpn]
+other = "Add new VPN"
+
+[done]
+other = "Done"
+
+[go_response]
+other = "GO"
