@@ -1,0 +1,9 @@
+# Ignore editor and IDE settings
+.idea/
+.vscode/
+.cache/
+.sync*
+
+# Ignore log files
+*.log
+git.sh
