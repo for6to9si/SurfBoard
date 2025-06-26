@@ -1,4 +1,4 @@
-package main
+package locale
 
 import (
 	"embed"
@@ -13,7 +13,7 @@ var localeFS embed.FS
 
 var bundle *i18n.Bundle
 
-func initI18n() {
+func InitI18n() {
 	bundle = i18n.NewBundle(language.English)
 	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
 
@@ -36,7 +36,7 @@ func initI18n() {
 	}
 }
 
-func getlocalizer(lang string) *i18n.Localizer {
+func Getlocalizer(lang string) *i18n.Localizer {
 	tag := language.English
 	if lang == "ru" {
 		tag = language.Russian

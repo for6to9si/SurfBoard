@@ -1,6 +1,7 @@
 package main
 
 import (
+	"SurfBoard/locale"
 	"context"
 	"fmt"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -12,7 +13,7 @@ import (
 )
 
 func main() {
-	initI18n() // 📌 Инициализация i18n
+	locale.InitI18n() // 📌 Инициализация i18n
 
 	ctx := context.Background()
 	botToken := os.Getenv("TOKEN")
@@ -28,7 +29,7 @@ func main() {
 	defer func() { _ = bh.Stop() }()
 
 	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
-		loc := getlocalizer(message.From.LanguageCode)
+		loc := locale.Getlocalizer(message.From.LanguageCode)
 
 		welcome, _ := loc.Localize(&i18n.LocalizeConfig{
 			MessageID: "welcome",
@@ -51,7 +52,7 @@ func main() {
 	}, th.CommandEqual("start"))
 
 	bh.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
-		loc := getlocalizer(query.From.LanguageCode)
+		loc := locale.Getlocalizer(query.From.LanguageCode)
 
 		var response string
 		switch query.Data {
