@@ -35,7 +35,7 @@ jobs:
           GOARCH: ${{ matrix.target.arch }}
           GOMIPS: softfloat  # optional, depending on your target device
         run: |
-          go build -v -o build/${{ matrix.target.output }} ./...
+          go build -v -o build/${{ matrix.target.output }} .
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
