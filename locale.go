@@ -2,9 +2,8 @@ package main
 
 import (
 	"embed"
-	"github.com/BurntSushi/toml"
-
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/pelletier/go-toml/v2"
 	"golang.org/x/text/language"
 	"strings"
 )
@@ -37,7 +36,7 @@ func initI18n() {
 	}
 }
 
-func localizer(lang string) *i18n.Localizer {
+func getlocalizer(lang string) *i18n.Localizer {
 	tag := language.English
 	if lang == "ru" {
 		tag = language.Russian

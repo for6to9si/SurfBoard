@@ -28,7 +28,7 @@ func main() {
 	defer func() { _ = bh.Stop() }()
 
 	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
-		loc := localizer(message.From.LanguageCode)
+		loc := getlocalizer(message.From.LanguageCode)
 
 		welcome, _ := loc.Localize(&i18n.LocalizeConfig{
 			MessageID: "welcome",
@@ -51,7 +51,7 @@ func main() {
 	}, th.CommandEqual("start"))
 
 	bh.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
-		loc := localizer(query.From.LanguageCode)
+		loc := getlocalizer(query.From.LanguageCode)
 
 		var response string
 		switch query.Data {
