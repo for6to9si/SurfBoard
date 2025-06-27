@@ -1,0 +1,90 @@
+name: Go Cross-Compile
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+      inputs:
+        prerelease:
+          description: 'Is this a prerelease?'
+          required: true
+          default: 'false'
+          type: choice
+          options:
+            - 'true'
+            - 'false'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - os: linux
+            arch: arm64
+            output: surfboard-arm64
+          - os: linux
+            arch: mipsle
+            output: surfboard-mipsle
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Build for ${{ matrix.target.arch }}
+        env:
+          GOOS: ${{ matrix.target.os }}
+          GOARCH: ${{ matrix.target.arch }}
+          GOMIPS: softfloat  # optional, depending on your target device
+        run: |
+          go build -v -o build/${{ matrix.target.output }} .
+
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tar gzip jq unzip fakeroot
+
+      - name: Create IPK package structure
+        run: |
+          mkdir -p surfboard-${{ matrix.arch }}/opt/sbin
+          mkdir -p surfboard-${{ matrix.arch }}/opt/etc/init.d
+          mkdir -p surfboard-${{ matrix.arch }}/opt/etc/surfboard
+          mkdir -p surfboard-${{ matrix.arch }}/opt/var/log/surfboard
+          mkdir -p surfboard-${{ matrix.arch }}/CONTROL
+          
+          
+          cat > surfboard-${{ matrix.arch }}/CONTROL/control <<EOF
+          Package: xray
+          Depends: libc,libssp,librt,libpthread,libpthread,jq,iptables,cron,curl,coreutils-numfmt,column
+          Version: ${{ github.ref_name }}
+          Architecture: mipsel-3.4
+          Section: net
+          Description: A minimalistic tool to automate Xray setup on Keenetic router systems..
+          License: GPL-3.0 license
+          Maintainer: for6to9si <for6to9si@gmail.com>
+          EOF
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target.output }}
+          path: build/${{ matrix.target.output }}
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Test
+        run: go test -v ./...
