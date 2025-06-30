@@ -3,6 +3,7 @@
 .vscode/
 .cache/
 .sync*
+build
 
 # Ignore log files
 *.log
