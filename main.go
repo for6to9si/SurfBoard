@@ -91,7 +91,8 @@ func getCurrentVPN() string {
 
 func listAllVPNs() string {
 	// Подключение к Xray gRPC
-	conn, err := grpc.Dial("127.0.0.1:10085", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("dns:///127.0.0.1:10085",
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Printf("Ошибка подключения к Xray: %v", err)
 		return "⚠️ Не удалось подключиться к Xray"
