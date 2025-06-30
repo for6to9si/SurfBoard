@@ -5,7 +5,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	pb "github.com/xtls/xray-core/app/observatory/command"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"log"
 	"os"
+	"sort"
+	"strings"
+	"time"
 
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
@@ -83,7 +90,48 @@ func getCurrentVPN() string {
 }
 
 func listAllVPNs() string {
-	return "[Список всех VPN]"
+	// Подключение к Xray gRPC
+	conn, err := grpc.Dial("127.0.0.1:10085", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Printf("Ошибка подключения к Xray: %v", err)
+		return "⚠️ Не удалось подключиться к Xray"
+	}
+	defer conn.Close()
+
+	client := pb.NewObservatoryServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	resp, err := client.GetOutboundStatus(ctx, &pb.GetOutboundStatusRequest{})
+	if err != nil {
+		log.Printf("Ошибка запроса: %v", err)
+		return "⚠️ Не удалось получить статус VPN"
+	}
+
+	statuses := resp.GetStatus().GetStatus()
+
+	// Сортировка: живые вверху, по delay
+	sort.Slice(statuses, func(i, j int) bool {
+		if statuses[i].Alive != statuses[j].Alive {
+			return statuses[i].Alive
+		}
+		return statuses[i].Delay < statuses[j].Delay
+	})
+
+	// Формирование текста
+	var sb strings.Builder
+	sb.WriteString("📡 Список VPN и их статус:\n\n")
+
+	for _, s := range statuses {
+		icon := "✅"
+		if !s.Alive {
+			icon = "❌"
+		}
+		sb.WriteString(fmt.Sprintf("%s %s — %d мс\n", icon, s.OutboundTag, s.Delay))
+	}
+
+	return sb.String()
 }
 
 func addNewVPN() string {
