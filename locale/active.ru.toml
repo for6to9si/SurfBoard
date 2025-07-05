@@ -15,3 +15,9 @@ other = "Готово"
 
 [go_response]
 other = "ПОЕХАЛИ"
+
+[no_filename]
+other = "Пожалуйста, укажите имя файла!"
+
+[file_provided]
+other = "Указан файл: {{.Filename}}"

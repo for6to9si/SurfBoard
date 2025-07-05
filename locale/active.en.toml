@@ -15,3 +15,9 @@ other = "Done"
 
 [go_response]
 other = "GO"
+
+[no_filename]
+other = "Please provide a filename!"
+
+[file_provided]
+other = "File provided: {{.Filename}}"

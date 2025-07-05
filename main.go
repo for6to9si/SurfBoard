@@ -12,8 +12,36 @@ import (
 	"os"
 )
 
+func getLang() string {
+	lang := os.Getenv("LANG") // e.g., "ru_RU.UTF-8"
+	if lang[:2] == "ru" {
+		return "ru"
+	}
+	return "en"
+}
+
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
+
+	loc := locale.Getlocalizer(getLang()) // язык из среды или логики
+
+	arguments := os.Args
+	if len(arguments) == 1 {
+		msg, _ := loc.Localize(&i18n.LocalizeConfig{
+			MessageID: "no_filename",
+		})
+		fmt.Println(msg)
+		return
+	}
+
+	filename := arguments[1]
+	msg, _ := loc.Localize(&i18n.LocalizeConfig{
+		MessageID: "file_provided",
+		TemplateData: map[string]string{
+			"Filename": filename,
+		},
+	})
+	fmt.Println(msg)
 
 	ctx := context.Background()
 	botToken := os.Getenv("TOKEN")
