@@ -1,9 +1,11 @@
 package main
 
 import (
+	"SurfBoard/conf"
 	"SurfBoard/locale"
 	"SurfBoard/xrayclient"
 	"context"
+	"flag"
 	"fmt"
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
@@ -23,25 +25,35 @@ func getLang() string {
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
 
-	loc := locale.Getlocalizer(getLang()) // язык из среды или логики
+	locale.Loc = locale.Getlocalizer(getLang()) // Установка локализатора
 
-	arguments := os.Args
-	if len(arguments) == 1 {
-		msg, _ := loc.Localize(&i18n.LocalizeConfig{
-			MessageID: "no_filename",
+	// Локализация описания флага
+	configFlagDesc, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
+		MessageID: "config_flag_description",
+	})
+
+	// Регистрируем флаг с локализованным описанием
+	configPath := flag.String("c", "", configFlagDesc)
+	flag.StringVar(configPath, "config", "", configFlagDesc)
+	flag.Parse()
+
+	// Проверка, указан ли путь
+	if *configPath == "" {
+		msg, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
+			MessageID: "config_path_required",
 		})
 		fmt.Println(msg)
-		return
+		os.Exit(1)
 	}
 
-	filename := arguments[1]
-	msg, _ := loc.Localize(&i18n.LocalizeConfig{
-		MessageID: "file_provided",
-		TemplateData: map[string]string{
-			"Filename": filename,
-		},
-	})
-	fmt.Println(msg)
+	config, err := conf.LoadConfig(*configPath)
+	if err != nil {
+		fmt.Println("Ошибка при загрузке конфигурации:", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("gRPC Target IP:", config.GRPC.Target.IP)
+	fmt.Println("gRPC Target Port:", config.GRPC.Target.Port)
 
 	ctx := context.Background()
 	botToken := os.Getenv("TOKEN")

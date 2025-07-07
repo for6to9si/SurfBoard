@@ -21,3 +21,12 @@ other = "Please provide a filename!"
 
 [file_provided]
 other = "File provided: {{.Filename}}"
+
+[error_opening_file]
+other = "Error opening file {{.Path}}"
+
+[config_flag_description]
+other = "Path to the configuration file (e.g., config.json)"
+
+["config_path_required"]
+other = "Error: please provide a config file path using the -c or --config flag"

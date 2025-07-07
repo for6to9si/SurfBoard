@@ -13,6 +13,8 @@ var localeFS embed.FS
 
 var bundle *i18n.Bundle
 
+var Loc *i18n.Localizer // глобальная переменная локализатора
+
 func InitI18n() {
 	bundle = i18n.NewBundle(language.English)
 	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)

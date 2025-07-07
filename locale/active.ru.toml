@@ -21,3 +21,12 @@ other = "Пожалуйста, укажите имя файла!"
 
 [file_provided]
 other = "Указан файл: {{.Filename}}"
+
+[error_opening_file]
+other = "Ошибка при открытии файла {{.Path}}"
+
+[config_flag_description]
+other = "Путь к конфигурационному файлу (например, config.json)"
+
+[config_path_required]
+other = "Ошибка: укажите путь к конфигурационному файлу с помощью флага -c или --config"
