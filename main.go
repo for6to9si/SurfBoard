@@ -48,7 +48,14 @@ func main() {
 
 	config, err := conf.LoadConfig(*configPath)
 	if err != nil {
-		fmt.Println("Ошибка при загрузке конфигурации:", err)
+		msg, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
+			MessageID: "config_load_failed",
+			TemplateData: map[string]string{
+				"Error": err.Error(),
+			},
+		})
+
+		fmt.Println(msg)
 		os.Exit(1)
 	}
 

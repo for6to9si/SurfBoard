@@ -28,5 +28,8 @@ other = "Error opening file {{.Path}}"
 [config_flag_description]
 other = "Path to the configuration file (e.g., config.json)"
 
-["config_path_required"]
+[config_path_required]
 other = "Error: please provide a config file path using the -c or --config flag"
+
+[config_load_failed]
+other = "Failed to load configuration: {{.Error}}"
