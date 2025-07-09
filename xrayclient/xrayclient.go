@@ -1,6 +1,7 @@
 package xrayclient
 
 import (
+	"SurfBoard/conf"
 	"context"
 	"fmt"
 	"log"
@@ -14,10 +15,17 @@ import (
 	pb "github.com/xtls/xray-core/app/observatory/command"
 )
 
+var address string
+
+func Init(grpc conf.Grpc) {
+	address = fmt.Sprintf("dns:///%s:%d", grpc.Target.IP, grpc.Target.Port)
+	fmt.Printf("Using GRPC IP: %s, Port: %d\n", grpc.Target.IP, grpc.Target.Port)
+}
+
 // ListVPNStatuses подключается к Xray и возвращает статус всех Outbound-соединений
 func ListVPNStatuses() string {
 	// Подключение
-	conn, err := grpc.NewClient("dns:///127.0.0.1:10085",
+	conn, err := grpc.NewClient(address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Printf("Xray: ошибка подключения: %v", err)

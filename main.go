@@ -67,9 +67,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("gRPC Target IP:", config.XwayConf.Grpc.Target.IP)
-
-	fmt.Println("gRPC Target Port:", config.XwayConf.Grpc.Target.Port)
+	// Присваиваем в глобальную переменную
+	xrayclient.Init(config.XwayConf.Grpc)
 
 	ctx := context.Background()
 	//botToken := os.Getenv("TOKEN")
