@@ -1,9 +1,29 @@
 {
-  "grpc": {
-    "target":{
-      "ip": "127.0.0.1",
-      "port": 10085
-
+  "xwayConf": {
+    "grpc": {
+      "target":{
+        "ip": "192.168.2.1",
+        "port": 8080
+      }
     }
+  },
+  "secondaryXray": {
+    "autostart": true,
+    "paths": {
+      "xrayExecutable": "/opt/xray/xray",
+      "xrayConfig": "/etc/xray/config.json"
+    },
+    "grpc": {
+      "target":{
+        "ip": "127.0.0.1",
+        "port": 10085
+
+      }
+    }
+  },
+  "tgBot": {
+    "TOKEN": "aaaaaa:AAdp9_PB-d7pm_5ido",
+    "adminIds": ["1111111","2222222"]
+
   }
 }
