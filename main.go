@@ -27,18 +27,26 @@ func main() {
 
 	locale.Loc = locale.Getlocalizer(getLang()) // Установка локализатора
 
+	//export SF_LOCATION_CONFDIR=/opt/etc/xray/configs
+	envConfigPath := os.Getenv("SF_LOCATION_CONFDIR")
+
 	// Локализация описания флага
 	configFlagDesc, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
 		MessageID: "config_flag_description",
 	})
 
 	// Регистрируем флаг с локализованным описанием
-	configPath := flag.String("c", "", configFlagDesc)
-	flag.StringVar(configPath, "config", "", configFlagDesc)
+	flagConfigPath := flag.String("c", "", configFlagDesc)
+	flag.StringVar(flagConfigPath, "config", "", configFlagDesc)
 	flag.Parse()
 
-	// Проверка, указан ли путь
-	if *configPath == "" {
+	// Определяем финальный путь к конфигу
+	finalConfigPath := ""
+	if *flagConfigPath != "" {
+		finalConfigPath = *flagConfigPath
+	} else if envConfigPath != "" {
+		finalConfigPath = envConfigPath
+	} else {
 		msg, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
 			MessageID: "config_path_required",
 		})
@@ -46,7 +54,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	config, err := conf.LoadConfig(*configPath)
+	config, err := conf.LoadConfig(finalConfigPath)
 	if err != nil {
 		msg, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
 			MessageID: "config_load_failed",
@@ -59,13 +67,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("gRPC Target IP:", config.GRPC.Target.IP)
-	fmt.Println("gRPC Target Port:", config.GRPC.Target.Port)
+	fmt.Println("gRPC Target IP:", config.XwayConf.Grpc.Target.IP)
+
+	fmt.Println("gRPC Target Port:", config.XwayConf.Grpc.Target.Port)
 
 	ctx := context.Background()
-	botToken := os.Getenv("TOKEN")
+	//botToken := os.Getenv("TOKEN")
 
-	bot, err := telego.NewBot(botToken, telego.WithDefaultDebugLogger())
+	bot, err := telego.NewBot(config.TgBot.Token, telego.WithDefaultDebugLogger())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

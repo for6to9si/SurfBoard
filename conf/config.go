@@ -8,18 +8,34 @@ import (
 	"os"
 )
 
-// Структуры конфигурации
+// Структуры конфигурации сделал автоматом https://mholt.github.io/json-to-go/
 type Config struct {
-	GRPC GRPCConfig `json:"grpc"`
+	XwayConf      XwayConf      `json:"xwayConf"`
+	SecondaryXray SecondaryXray `json:"secondaryXray"`
+	TgBot         TgBot         `json:"tgBot"`
 }
-
-type GRPCConfig struct {
-	Target TargetConfig `json:"target"`
-}
-
-type TargetConfig struct {
+type Target struct {
 	IP   string `json:"ip"`
 	Port int    `json:"port"`
+}
+type Grpc struct {
+	Target Target `json:"target"`
+}
+type XwayConf struct {
+	Grpc Grpc `json:"grpc"`
+}
+type Paths struct {
+	XrayExecutable string `json:"xrayExecutable"`
+	XrayConfig     string `json:"xrayConfig"`
+}
+type SecondaryXray struct {
+	Autostart bool  `json:"autostart"`
+	Paths     Paths `json:"paths"`
+	Grpc      Grpc  `json:"grpc"`
+}
+type TgBot struct {
+	Token    string   `json:"TOKEN"`
+	AdminIds []string `json:"adminIds"`
 }
 
 // LoadConfig загружает конфигурацию из JSON-файла
