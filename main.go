@@ -92,40 +92,55 @@ func main() {
 				"Name": message.From.FirstName,
 			},
 		})
-		currentVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "current_vpn"})
-		allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
-		addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
 
 		_, _ = bot.SendMessage(ctx, tu.Message(
 			tu.ID(message.Chat.ID), welcome,
 		).WithReplyMarkup(tu.InlineKeyboard(
-			tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("current_vpn")),
-			tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")),
-			tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")),
+			tu.InlineKeyboardRow(tu.InlineKeyboardButton("First VPN").WithCallbackData("first_vpn")),
+			tu.InlineKeyboardRow(tu.InlineKeyboardButton("Second VPN").WithCallbackData("second_vpn")),
 		)))
+
 		return nil
 	}, th.CommandEqual("start"))
 
 	bh.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
 		loc := locale.Getlocalizer(query.From.LanguageCode)
 
-		var response string
-		switch query.Data {
-		case "current_vpn":
-			response = getCurrentVPN()
-		case "all_vpns":
-			response = listAllVPNs()
-		case "add_vpn":
-			response = addNewVPN()
-		default:
-			response, _ = loc.LocalizeMessage(&i18n.Message{ID: "go_response"})
-		}
-
+		currentVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "current_vpn"})
+		allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
+		addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
 		done, _ := loc.LocalizeMessage(&i18n.Message{ID: "done"})
 
-		_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), response))
-		_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID).WithText(done))
+		switch query.Data {
+		case "second_vpn":
+			// Отображаем скрытые кнопки
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Second VPN options:",
+			).WithReplyMarkup(tu.InlineKeyboard(
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("current_vpn")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")),
+			)))
 
+		case "first_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"First VPN selected.",
+			))
+
+		case "current_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN()))
+		case "all_vpns":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs()))
+		case "add_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN()))
+		default:
+			response, _ := loc.LocalizeMessage(&i18n.Message{ID: "go_response"})
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), response))
+		}
+
+		_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID).WithText(done))
 		return nil
 	}, th.AnyCallbackQueryWithMessage())
 
