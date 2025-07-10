@@ -12,7 +12,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	pb "github.com/xtls/xray-core/app/observatory/command"
+	pbObserv "github.com/xtls/xray-core/app/observatory/command"
+	pbRoute "github.com/xtls/xray-core/app/router/command"
 )
 
 var address string
@@ -37,12 +38,12 @@ func ListVPNStatuses() string {
 		}
 	}()
 
-	client := pb.NewObservatoryServiceClient(conn)
+	client := pbObserv.NewObservatoryServiceClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	resp, err := client.GetOutboundStatus(ctx, &pb.GetOutboundStatusRequest{})
+	resp, err := client.GetOutboundStatus(ctx, &pbObserv.GetOutboundStatusRequest{})
 	if err != nil {
 		log.Printf("Xray: ошибка запроса: %v", err)
 		return "⚠️ Не удалось получить статус VPN"
@@ -69,4 +70,48 @@ func ListVPNStatuses() string {
 	}
 
 	return sb.String()
+}
+
+func GetCurrentVPN() string {
+	conn, err := grpc.NewClient(address,
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Printf("Ошибка подключения к Xray: %v", err)
+		return "⚠️ Не удалось подключиться"
+	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Printf("Ошибка при закрытии соединения: %v", err)
+		}
+	}()
+
+	client := pbRoute.NewRoutingServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	resp, err := client.GetBalancerInfo(ctx, &pbRoute.GetBalancerInfoRequest{
+		Tag: "bestVPN",
+	})
+	if err != nil {
+		log.Printf("Ошибка запроса: %v", err)
+		return "⚠️ Ошибка при запросе"
+	}
+
+	balancer := resp.GetBalancer()
+	if balancer == nil {
+		return "⚠️ Балансер не найден"
+	}
+
+	// 1. Если есть override.target — используем его
+	if override := balancer.GetOverride(); override != nil && override.GetTarget() != "" {
+		return override.GetTarget()
+	}
+
+	// 2. Иначе берём первый из principleTarget.tag
+	if tags := balancer.GetPrincipleTarget().GetTag(); len(tags) > 0 {
+		return tags[0]
+	}
+
+	return "⚠️ Нет доступных VPN"
 }

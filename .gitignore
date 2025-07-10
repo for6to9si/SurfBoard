@@ -8,3 +8,4 @@ build
 # Ignore log files
 *.log
 git.sh
+/etc/surfBoard/conf.json

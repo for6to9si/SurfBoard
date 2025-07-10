@@ -134,7 +134,7 @@ func main() {
 
 // 🧩 Заглушки под VPN-логику
 func getCurrentVPN() string {
-	return "[Информация о текущем VPN]"
+	return "🌍 Текущий VPN: " + xrayclient.GetCurrentVPN()
 }
 
 func listAllVPNs() string {
