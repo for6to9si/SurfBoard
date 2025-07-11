@@ -121,13 +121,28 @@ func main() {
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("current_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
 
 		case "first_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
 				"First VPN selected.",
-			))
+			).WithReplyMarkup(tu.InlineKeyboard(
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("current_vpn")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")),
+			)))
+
+		case "back_to_main":
+			// Возвращаемся к начальному меню
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Вы вернулись в главное меню.",
+			).WithReplyMarkup(tu.InlineKeyboard(
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("First VPN").WithCallbackData("first_vpn")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Second VPN").WithCallbackData("second_vpn")),
+			)))
 
 		case "current_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN()))
