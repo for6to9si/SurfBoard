@@ -15,3 +15,27 @@ other = "Done"
 
 [go_response]
 other = "GO"
+
+[no_filename]
+other = "Please provide a filename!"
+
+[error_closing_file]
+other = "File closing error {Path}"
+
+[file_provided]
+other = "File provided: {{.Filename}}"
+
+[error_opening_file]
+other = "Error opening file {{.Path}}"
+
+[config_flag_description]
+other = "Path to the configuration file (e.g., config.json)"
+
+[config_path_required]
+other = "Error: please provide a config file path using the -c or --config flag"
+
+[config_load_failed]
+other = "Failed to load configuration: {{.Error}}"
+
+[unknown_command]
+other = "Unknown Command. Please select an option from the menu."

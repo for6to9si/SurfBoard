@@ -1,0 +1,59 @@
+{
+    "xwayConf":
+    {
+        "paths":
+        {
+            "xrayExecutable": "/opt/sbin/xray",
+            "xrayRestart": "/opt/etc/init.d/S98xray fast_restart",
+            "xrayStart": "/opt/etc/init.d/S98xray start",
+            "xrayStop": "/opt/etc/init.d/S98xray stop",
+            "xrayStatus": "/opt/etc/init.d/S98xray status"
+        },
+        "env":
+        {
+            "XRAY_LOCATION_ASSET": "/opt/etc/xray/dat",
+            "XRAY_LOCATION_CONFDIR": "/opt/etc/xray/configs",
+            "XRAY_RAY_BUFFER_SIZE": 4
+        },
+        "grpc":
+        {
+            "target":
+            {
+                "ip": "127.0.0.1",
+                "port": 10085
+            }
+        }
+    },
+    "benchmarkSettings":
+    {
+        "autostart": true,
+        "paths":
+        {
+            "xrayExecutable": "/opt/sbin/xray",
+            "xraylockFile": "/tmp/xray.lock"
+        },
+        "env":
+        {
+            "XRAY_LOCATION_ASSET": "/opt/etc/xray/dat",
+            "XRAY_LOCATION_CONFDIR": "/opt/etc/xray/configs",
+            "XRAY_RAY_BUFFER_SIZE": 4
+        },
+        "grpc":
+        {
+            "target":
+            {
+                "ip": "127.0.0.1",
+                "port": 10085
+            }
+        }
+    },
+    "tgBot":
+    {
+        "TOKEN": "aaaaaa:AAdp9_PB-d7pm_5ido",
+        "adminIds":
+        [
+            "1111111",
+            "2222222"
+        ]
+    }
+}
