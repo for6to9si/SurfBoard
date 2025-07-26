@@ -7,7 +7,8 @@
             "xrayRestart": "/opt/etc/init.d/S98xray fast_restart",
             "xrayStart": "/opt/etc/init.d/S98xray start",
             "xrayStop": "/opt/etc/init.d/S98xray stop",
-            "xrayStatus": "/opt/etc/init.d/S98xray status"
+            "xrayStatus": "/opt/etc/init.d/S98xray status",
+            "xraylockFile": "/opt/tmp/xray-xwave.lock"
         },
         "env":
         {
@@ -30,7 +31,7 @@
         "paths":
         {
             "xrayExecutable": "/opt/sbin/xray",
-            "xraylockFile": "/tmp/xray.lock"
+            "xraylockFile": "/opt/tmp/xray-surfboard.lock"
         },
         "env":
         {

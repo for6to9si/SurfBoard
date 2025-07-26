@@ -23,13 +23,21 @@ func Init(grpc conf.Grpc) {
 	fmt.Printf("Using GRPC IP: %s, Port: %d\n", grpc.Target.IP, grpc.Target.Port)
 }
 
-// ListVPNStatuses подключается к Xray и возвращает статус всех Outbound-соединений
-func ListVPNStatuses() string {
-	// Подключение
+// newGRPCClient создаёт новое gRPC-соединение и возвращает его вместе с функцией закрытия
+func newGRPCClient() (*grpc.ClientConn, error) {
 	conn, err := grpc.NewClient(address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Printf("Xray: ошибка подключения: %v", err)
+		return nil, fmt.Errorf("ошибка подключения к Xray: %v", err)
+	}
+	return conn, nil
+}
+
+// ListVPNStatuses подключается к Xray и возвращает статус всех Outbound-соединений
+func ListVPNStatuses() string {
+	conn, err := newGRPCClient()
+	if err != nil {
+		log.Printf("Xray: %v", err)
 		return "⚠️ Не удалось подключиться к Xray"
 	}
 	defer func() {
@@ -72,16 +80,16 @@ func ListVPNStatuses() string {
 	return sb.String()
 }
 
+// GetCurrentVPN возвращает текущий активный VPN
 func GetCurrentVPN() string {
-	conn, err := grpc.NewClient(address,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := newGRPCClient()
 	if err != nil {
-		log.Printf("Ошибка подключения к Xray: %v", err)
+		log.Printf("Xray: %v", err)
 		return "⚠️ Не удалось подключиться"
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
-			log.Printf("Ошибка при закрытии соединения: %v", err)
+			log.Printf("Xray: ошибка при закрытии соединения: %v", err)
 		}
 	}()
 
@@ -94,7 +102,7 @@ func GetCurrentVPN() string {
 		Tag: "bestVPN",
 	})
 	if err != nil {
-		log.Printf("Ошибка запроса: %v", err)
+		log.Printf("Xray: ошибка запроса: %v", err)
 		return "⚠️ Ошибка при запросе"
 	}
 
