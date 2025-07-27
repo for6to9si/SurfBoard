@@ -19,41 +19,44 @@ import (
 // XrayClient представляет клиента для взаимодействия с Xray gRPC-сервером
 type XrayClient struct {
 	address string
+	conn    *grpc.ClientConn
 }
 
-// NewXrayClient создаёт новый экземпляр XrayClient с заданной конфигурацией
-func NewXrayClient(grpc conf.Grpc) *XrayClient {
-	address := fmt.Sprintf("dns:///%s:%d", grpc.Target.IP, grpc.Target.Port)
-	fmt.Printf("Создан XrayClient с IP: %s, Port: %d\n", grpc.Target.IP, grpc.Target.Port)
-	return &XrayClient{
-		address: address,
-	}
-}
+// NewXrayClient создаёт новый экземпляр XrayClient с установленным gRPC-соединением
+func NewXrayClient(grpcConfig conf.Grpc) (*XrayClient, error) {
+	address := fmt.Sprintf("dns:///%s:%d", grpcConfig.Target.IP, grpcConfig.Target.Port)
+	fmt.Printf("Создан XrayClient с IP: %s, Port: %d\n", grpcConfig.Target.IP, grpcConfig.Target.Port)
 
-// newGRPCClient создаёт новое gRPC-соединение для клиента
-func (c *XrayClient) newGRPCClient() (*grpc.ClientConn, error) {
-	conn, err := grpc.NewClient(c.address,
+	conn, err := grpc.NewClient(address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("ошибка подключения к Xray: %v", err)
 	}
-	return conn, nil
+
+	return &XrayClient{
+		address: address,
+		conn:    conn,
+	}, nil
+}
+
+// Close закрывает gRPC-соединение
+func (c *XrayClient) Close() error {
+	if c.conn != nil {
+		err := c.conn.Close()
+		c.conn = nil
+		return err
+	}
+	return nil
 }
 
 // ListVPNStatuses возвращает статус всех Outbound-соединений
 func (c *XrayClient) ListVPNStatuses() string {
-	conn, err := c.newGRPCClient()
-	if err != nil {
-		log.Printf("Xray: %v", err)
-		return "⚠️ Не удалось подключиться к Xray"
+	if c.conn == nil {
+		log.Printf("Xray: соединение не инициализировано")
+		return "⚠️ Соединение не инициализировано"
 	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			log.Printf("Xray: ошибка при закрытии соединения: %v", err)
-		}
-	}()
 
-	client := pbObserv.NewObservatoryServiceClient(conn)
+	client := pbObserv.NewObservatoryServiceClient(c.conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -89,18 +92,12 @@ func (c *XrayClient) ListVPNStatuses() string {
 
 // GetCurrentVPN возвращает текущий активный VPN
 func (c *XrayClient) GetCurrentVPN() string {
-	conn, err := c.newGRPCClient()
-	if err != nil {
-		log.Printf("Xray: %v", err)
-		return "⚠️ Не удалось подключиться"
+	if c.conn == nil {
+		log.Printf("Xray: соединение не инициализировано")
+		return "⚠️ Соединение не инициализировано"
 	}
-	defer func() {
-		if err := conn.Close(); err != nil {
-			log.Printf("Xray: ошибка при закрытии соединения: %v", err)
-		}
-	}()
 
-	client := pbRoute.NewRoutingServiceClient(conn)
+	client := pbRoute.NewRoutingServiceClient(c.conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

@@ -12,6 +12,7 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"log"
 	"os"
 )
 
@@ -68,8 +69,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Присваиваем в глобальную переменную
-	xrayclient.Init(config.XwayConf.Grpc)
+	// Конфигурация для первого xray-сервера
+	client1, err := xrayclient.NewXrayClient(config.XwayConf.Grpc)
+
+	if err != nil {
+		log.Fatalf("Ошибка создания первого XrayClient: %v", err)
+	}
+
+	defer func() {
+		if err := client1.Close(); err != nil {
+			log.Printf("Ошибка закрытия первого XrayClient: %v", err)
+		}
+	}()
 
 	benchmarkMode.Init(config.BenchmarkSettings)
 
@@ -151,9 +162,9 @@ func main() {
 		case "start_xray":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), startXray()))
 		case "current_vpn":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN()))
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(client1)))
 		case "all_vpns":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs()))
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(client1)))
 		case "add_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN()))
 		default:
@@ -179,12 +190,12 @@ func startXray() string {
 }
 
 // 🧩 Заглушки под VPN-логику
-func getCurrentVPN() string {
-	return "🌍 Текущий VPN: " + xrayclient.GetCurrentVPN()
+func getCurrentVPN(client *xrayclient.XrayClient) string {
+	return "🌍 Текущий VPN: " + client.GetCurrentVPN()
 }
 
-func listAllVPNs() string {
-	return xrayclient.ListVPNStatuses()
+func listAllVPNs(client *xrayclient.XrayClient) string {
+	return client.ListVPNStatuses()
 }
 
 func addNewVPN() string {
