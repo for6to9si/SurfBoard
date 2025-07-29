@@ -1,6 +1,7 @@
 {
     "xwayConf":
     {
+        "isEnabled": true,
         "paths":
         {
             "xrayExecutable": "/opt/sbin/xray",
@@ -25,8 +26,27 @@
             }
         }
     },
+    "swayConf":
+    {
+        "isEnabled": true,
+        "paths":
+        {
+            "singboxExecutable": "/opt/sbin/sing-box",
+            "singboxRestart": "/opt/etc/init.d/S99singbox fast_restart",
+            "singboxStart": "/opt/etc/init.d/S99singbox start",
+            "singboxStop": "/opt/etc/init.d/S99singbox stop",
+            "singboxStatus": "/opt/etc/init.d/S99singbox status",
+            "singboxlockFile": "/opt/tmp/S99singbox-sway.lock"
+        },
+        "env":
+        {
+            "SSL_CERT_DIR": "/opt/etc/ssl/certs",
+            "SINGBOX_LOCATION_CONFDIR": "/opt/etc/sing-box/configs"
+        }
+    },
     "benchmarkSettings":
     {
+        "isEnabled": true,
         "autostart": true,
         "paths":
         {
@@ -45,6 +65,16 @@
             {
                 "ip": "127.0.0.1",
                 "port": 10085
+            }
+        },
+        "openAI": {
+            "isEnabled": true,
+            "apikey": "sk-proj-EW_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "url": "https://api.openai.com/v1/chat/completions",
+            "statusCodes": {
+                "geoBlocked": 403,
+                "retryableErrors": [429, 503],
+                "allowed": [200, 204]
             }
         }
     },
