@@ -39,3 +39,6 @@ other = "Failed to load configuration: {{.Error}}"
 
 [unknown_command]
 other = "Unknown Command. Please select an option from the menu."
+
+[access_denied]
+other = "Access denied: You are not authorized to use this bot. Your User ID is {{.UserID}}. Please share this ID with the administrator to request access."

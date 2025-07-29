@@ -93,12 +93,40 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Helper function to check if user is authorized
+	isUserAuthorized := func(userID int64) bool {
+		for _, allowedID := range config.TgBot.AdminIds {
+			if allowedID == userID {
+				return true
+			}
+		}
+		return false
+	}
+
 	updates, _ := bot.UpdatesViaLongPolling(ctx, nil)
 	bh, _ := th.NewBotHandler(bot, updates)
 	defer func() { _ = bh.Stop() }()
 
 	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
+
 		loc := locale.Getlocalizer(message.From.LanguageCode)
+
+		// Check if user is authorized
+		if !isUserAuthorized(message.From.ID) {
+
+			accessDenied, _ := loc.Localize(&i18n.LocalizeConfig{
+				MessageID: "access_denied",
+				TemplateData: map[string]interface{}{
+					"UserID": message.From.ID,
+				},
+			})
+
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(message.Chat.ID),
+				accessDenied,
+			))
+			return nil
+		}
 
 		welcome, _ := loc.Localize(&i18n.LocalizeConfig{
 			MessageID: "welcome",
@@ -117,7 +145,25 @@ func main() {
 	}, th.CommandEqual("start"))
 
 	bh.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
+
 		loc := locale.Getlocalizer(query.From.LanguageCode)
+
+		// Check if user is authorized
+		if !isUserAuthorized(query.From.ID) {
+
+			accessDenied, _ := loc.Localize(&i18n.LocalizeConfig{
+				MessageID: "access_denied",
+				TemplateData: map[string]interface{}{
+					"UserID": query.From.ID,
+				},
+			})
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				accessDenied,
+			))
+			_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
+			return nil
+		}
 
 		currentVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "current_vpn"})
 		allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
