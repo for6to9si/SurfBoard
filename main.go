@@ -169,6 +169,7 @@ func main() {
 		allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
 		addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
 		done, _ := loc.LocalizeMessage(&i18n.Message{ID: "done"})
+		underDevelopment, _ := loc.LocalizeMessage(&i18n.Message{ID: "under_development"})
 
 		switch query.Data {
 		case "second_vpn":
@@ -191,6 +192,14 @@ func main() {
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("🔄 Рестарт").WithCallbackData("start_xray")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
+			)))
+
+		case "singbox_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				underDevelopment,
+			).WithReplyMarkup(tu.InlineKeyboard(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
 
@@ -241,7 +250,7 @@ func greetUser(config *conf.Config) [][]telego.InlineKeyboardButton {
 	}
 	if config.SwayConf.IsEnabled {
 		inlineKeyboard = append(inlineKeyboard, []telego.InlineKeyboardButton{
-			tu.InlineKeyboardButton("SingBox VPN").WithCallbackData("second_vpn"),
+			tu.InlineKeyboardButton("SingBox VPN").WithCallbackData("singbox_vpn"),
 		})
 	}
 
