@@ -171,8 +171,11 @@ func main() {
 		done, _ := loc.LocalizeMessage(&i18n.Message{ID: "done"})
 		underDevelopment, _ := loc.LocalizeMessage(&i18n.Message{ID: "under_development"})
 
+		// Объявляем пустую клавиатуру
+		//var inlineKeyboard [][]telego.InlineKeyboardButton
+
 		switch query.Data {
-		case "second_vpn":
+		case "xray_vpn":
 			// Отображаем скрытые кнопки
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
@@ -184,16 +187,25 @@ func main() {
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
 
-		case "first_vpn":
+		case "benchmark_vpn":
+
+			inlineKeyboard := [][]telego.InlineKeyboardButton{
+				{tu.InlineKeyboardButton(
+					"⏹️ Стор").WithCallbackData("benchmark_stop_xray"),
+				},
+				{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
+				{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
+				{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
+			}
+
+			if !benchmarkMode.IsXrayRunning() {
+				inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("▶️ Cтарт").WithCallbackData("benchmark_start_xray")}
+			}
+
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
-				"First VPN selected.",
-			).WithReplyMarkup(tu.InlineKeyboard(
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton("🔄 Рестарт").WithCallbackData("start_xray")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
-			)))
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
 
 		case "singbox_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(
@@ -211,8 +223,10 @@ func main() {
 				"Вы вернулись в главное меню.",
 			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
 
-		case "start_xray":
+		case "benchmark_start_xray":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), startXray()))
+		case "benchmark_stop_xray":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), stopXray()))
 		case "current_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(client1)))
 		case "all_vpns":
@@ -240,17 +254,17 @@ func greetUser(config *conf.Config) [][]telego.InlineKeyboardButton {
 
 	if config.XwayConf.IsEnabled {
 		inlineKeyboard = append(inlineKeyboard, []telego.InlineKeyboardButton{
-			tu.InlineKeyboardButton("First VPN").WithCallbackData("first_vpn"),
+			tu.InlineKeyboardButton("X-Wave").WithCallbackData("xray_vpn"),
 		})
 	}
 	if config.BenchmarkSettings.IsEnabled {
 		inlineKeyboard = append(inlineKeyboard, []telego.InlineKeyboardButton{
-			tu.InlineKeyboardButton("Second VPN").WithCallbackData("second_vpn"),
+			tu.InlineKeyboardButton("Benchmark").WithCallbackData("benchmark_vpn"),
 		})
 	}
 	if config.SwayConf.IsEnabled {
 		inlineKeyboard = append(inlineKeyboard, []telego.InlineKeyboardButton{
-			tu.InlineKeyboardButton("SingBox VPN").WithCallbackData("singbox_vpn"),
+			tu.InlineKeyboardButton("S-Wave").WithCallbackData("singbox_vpn"),
 		})
 	}
 
@@ -259,6 +273,10 @@ func greetUser(config *conf.Config) [][]telego.InlineKeyboardButton {
 
 func startXray() string {
 	return "🌍 Текущий VPN: " + benchmarkMode.StartXray()
+}
+
+func stopXray() string {
+	return "🌍 Текущий VPN: " + benchmarkMode.StopXray()
 }
 
 // 🧩 Заглушки под VPN-логику

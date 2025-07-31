@@ -48,7 +48,7 @@ func ToEnvSlice(e conf.Env) []string {
 func StartXray() string {
 
 	// Проверяем, запущен ли процесс
-	if isXrayRunning() {
+	if IsXrayRunning() {
 		return "Xray-core уже запущен"
 	}
 
@@ -87,25 +87,28 @@ func StartXray() string {
 		return fmt.Sprintf("Ошибка записи PID: %v", err)
 	}
 
-	return "Запуск Xray-core успешен"
+	return fmt.Sprintf("Запуск Xray-core успешен")
 }
 
 // Останавливает Xray-core
-func StopXray() {
+func StopXray() string {
 	if xrayCmd != nil && xrayCmd.Process != nil {
 		fmt.Println("■ Остановка Xray-core...")
 		err := xrayCmd.Process.Signal(syscall.SIGTERM)
 		if err != nil {
-			fmt.Println("❌ Не удалось отправить SIGTERM:", err)
+			return fmt.Sprintf("❌ Не удалось отправить SIGTERM:", err)
 		}
 		if waitErr := xrayCmd.Wait(); waitErr != nil {
-			fmt.Println("❌ Ошибка при ожидании завершения процесса:", waitErr)
+			return fmt.Sprintf("❌ Ошибка при ожидании завершения процесса:", waitErr)
 		}
+		// Обнуляем xrayCmd после успешной остановки
+		xrayCmd = nil
 	}
+	return fmt.Sprintf("Xray-core успешено отключен")
 }
 
 // Проверяет, запущен ли процесс xray
-func isXrayRunning() bool {
+func IsXrayRunning() bool {
 	// Проверяем наличие файла блокировки
 	if _, err := os.Stat(lockFile); os.IsNotExist(err) {
 		return false
