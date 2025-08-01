@@ -191,7 +191,7 @@ func main() {
 
 			inlineKeyboard := [][]telego.InlineKeyboardButton{
 				{tu.InlineKeyboardButton(
-					"⏹️ Стор").WithCallbackData("benchmark_stop_xray"),
+					"⏹️ Стор").WithCallbackData("benchmark_vpn_off"),
 				},
 				{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
 				{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
@@ -200,7 +200,53 @@ func main() {
 			}
 
 			if !benchmarkMode.IsXrayRunning() {
-				inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("▶️ Cтарт").WithCallbackData("benchmark_start_xray")}
+				inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("▶️ Cтарт").WithCallbackData("benchmark_vpn_on")}
+			}
+
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
+
+		case "benchmark_vpn_on":
+
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StartXray()))
+
+			inlineKeyboard := [][]telego.InlineKeyboardButton{
+				{tu.InlineKeyboardButton(
+					"⏹️ Стор").WithCallbackData("benchmark_vpn_off"),
+				},
+				{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
+				{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
+				{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
+				{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
+			}
+
+			if !benchmarkMode.IsXrayRunning() {
+				inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("▶️ Cтарт").WithCallbackData("benchmark_vpn_on")}
+			}
+
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
+
+		case "benchmark_vpn_off":
+
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StopXray()))
+
+			inlineKeyboard := [][]telego.InlineKeyboardButton{
+				{tu.InlineKeyboardButton(
+					"⏹️ Стор").WithCallbackData("benchmark_vpn_off"),
+				},
+				{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
+				{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
+				{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
+				{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
+			}
+
+			if !benchmarkMode.IsXrayRunning() {
+				inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("▶️ Cтарт").WithCallbackData("benchmark_vpn_on")}
 			}
 
 			_, _ = bot.SendMessage(ctx, tu.Message(
