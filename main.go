@@ -189,70 +189,33 @@ func main() {
 
 		case "benchmark_vpn":
 
-			inlineKeyboard := [][]telego.InlineKeyboardButton{
-				{tu.InlineKeyboardButton(
-					"⏹️ Стор").WithCallbackData("benchmark_vpn_off"),
-				},
-				{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
-				{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
-				{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
-				{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
-			}
-
-			if !benchmarkMode.IsXrayRunning() {
-				inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("▶️ Cтарт").WithCallbackData("benchmark_vpn_on")}
-			}
-
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
 				"Benchmark mode selected",
-			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
+				InlineKeyboard: createBenchmarkKeyboard(allVPNs, addVPN, benchmarkMode.IsXrayRunning()),
+			}))
 
 		case "benchmark_vpn_on":
 
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StartXray()))
 
-			inlineKeyboard := [][]telego.InlineKeyboardButton{
-				{tu.InlineKeyboardButton(
-					"⏹️ Стор").WithCallbackData("benchmark_vpn_off"),
-				},
-				{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
-				{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
-				{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
-				{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
-			}
-
-			if !benchmarkMode.IsXrayRunning() {
-				inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("▶️ Cтарт").WithCallbackData("benchmark_vpn_on")}
-			}
-
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
 				"Benchmark mode selected",
-			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
+				InlineKeyboard: createBenchmarkKeyboard(allVPNs, addVPN, benchmarkMode.IsXrayRunning()),
+			}))
 
 		case "benchmark_vpn_off":
-
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StopXray()))
-
-			inlineKeyboard := [][]telego.InlineKeyboardButton{
-				{tu.InlineKeyboardButton(
-					"⏹️ Стор").WithCallbackData("benchmark_vpn_off"),
-				},
-				{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
-				{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
-				{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
-				{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
-			}
-
-			if !benchmarkMode.IsXrayRunning() {
-				inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("▶️ Cтарт").WithCallbackData("benchmark_vpn_on")}
-			}
-
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
-				"Benchmark mode selected",
-			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
+				benchmarkMode.StopXray(),
+			))
+			// Переход к fast_vpn_test
+			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
+				return err
+			}
 
 		case "singbox_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(
@@ -306,6 +269,24 @@ func main() {
 	}, th.AnyCallbackQueryWithMessage())
 
 	_ = bh.Start()
+}
+
+// Определяем функцию для создания клавиатуры для benchmark-режима
+func createBenchmarkKeyboard(allVPNs, addVPN string, isXrayRunning bool) [][]telego.InlineKeyboardButton {
+	buttonText := "⏹️ Стоп"
+	buttonData := "benchmark_vpn_off"
+	if !isXrayRunning {
+		buttonText = "▶️ Старт"
+		buttonData = "benchmark_vpn_on"
+	}
+
+	return [][]telego.InlineKeyboardButton{
+		{tu.InlineKeyboardButton(buttonText).WithCallbackData(buttonData)},
+		{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
+		{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
+		{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
+		{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
+	}
 }
 
 // Определяем функцию для обработки логики fast_vpn_test
