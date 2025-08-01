@@ -96,10 +96,10 @@ func StopXray() string {
 		fmt.Println("■ Остановка Xray-core...")
 		err := xrayCmd.Process.Signal(syscall.SIGTERM)
 		if err != nil {
-			return fmt.Sprintf("❌ Не удалось отправить SIGTERM:", err)
+			return fmt.Sprintf("❌ Не удалось отправить SIGTERM: %v ", err)
 		}
 		if waitErr := xrayCmd.Wait(); waitErr != nil {
-			return fmt.Sprintf("❌ Ошибка при ожидании завершения процесса:", waitErr)
+			return fmt.Sprintf("❌ Ошибка при ожидании завершения процесса: %v ", waitErr)
 		}
 		// Обнуляем xrayCmd после успешной остановки
 		xrayCmd = nil
