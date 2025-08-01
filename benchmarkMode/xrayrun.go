@@ -87,7 +87,7 @@ func StartXray() string {
 		return fmt.Sprintf("Ошибка записи PID: %v", err)
 	}
 
-	return fmt.Sprintf("Запуск Xray-core успешен")
+	return fmt.Sprintf("▶️ Запуск Xray-core успешен")
 }
 
 // Останавливает Xray-core
@@ -104,7 +104,7 @@ func StopXray() string {
 		// Обнуляем xrayCmd после успешной остановки
 		xrayCmd = nil
 	}
-	return fmt.Sprintf("Xray-core успешено отключен")
+	return fmt.Sprintf("⏹️ Xray-core успешено отключен")
 }
 
 // Проверяет, запущен ли процесс xray

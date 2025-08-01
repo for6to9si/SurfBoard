@@ -195,6 +195,7 @@ func main() {
 				},
 				{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
 				{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
+				{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
 				{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
 			}
 
@@ -224,9 +225,21 @@ func main() {
 			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
 
 		case "benchmark_start_xray":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), startXray()))
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StartXray()))
+			// Вызываем функцию для fast_vpn_test
+			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
+				return err
+			}
 		case "benchmark_stop_xray":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), stopXray()))
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StopXray()))
+			// Вызываем функцию для fast_vpn_test
+			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
+				return err
+			}
+		case "fast_vpn_test":
+			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
+				return err
+			}
 		case "current_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(client1)))
 		case "all_vpns":
@@ -249,6 +262,31 @@ func main() {
 	_ = bh.Start()
 }
 
+// Определяем функцию для обработки логики fast_vpn_test
+func handleFastVPNTest(ctx *th.Context, query telego.CallbackQuery, bot *telego.Bot, allVPNs, addVPN string) error {
+	inlineKeyboard := [][]telego.InlineKeyboardButton{
+		{tu.InlineKeyboardButton("▶️ Cтарт").WithCallbackData("benchmark_start_xray")},
+	}
+
+	if benchmarkMode.IsXrayRunning() {
+		inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("⏹️ Стоп").WithCallbackData("benchmark_stop_xray")}
+		inlineKeyboard = append(inlineKeyboard,
+			[]telego.InlineKeyboardButton{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
+			[]telego.InlineKeyboardButton{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
+		)
+	}
+
+	inlineKeyboard = append(inlineKeyboard,
+		[]telego.InlineKeyboardButton{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("benchmark_vpn")},
+	)
+
+	_, err := bot.SendMessage(ctx, tu.Message(
+		tu.ID(query.Message.GetChat().ID),
+		"🌐 VPN Test Меню",
+	).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
+	return err
+}
+
 func greetUser(config *conf.Config) [][]telego.InlineKeyboardButton {
 	var inlineKeyboard [][]telego.InlineKeyboardButton
 
@@ -269,14 +307,6 @@ func greetUser(config *conf.Config) [][]telego.InlineKeyboardButton {
 	}
 
 	return inlineKeyboard
-}
-
-func startXray() string {
-	return "🌍 Текущий VPN: " + benchmarkMode.StartXray()
-}
-
-func stopXray() string {
-	return "🌍 Текущий VPN: " + benchmarkMode.StopXray()
 }
 
 // 🧩 Заглушки под VPN-логику
