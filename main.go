@@ -93,6 +93,47 @@ func main() {
 		os.Exit(1)
 	}
 
+	// 1. Установка описания бота
+	err = bot.SetMyDescription(ctx, &telego.SetMyDescriptionParams{
+		Description: "Приветствую! Это бот для управления VPN.\n\n" +
+			"📌 Основные функции:\n" +
+			"- Настройка VPN подключений\n" +
+			"- Тестирование скорости\n" +
+			"- Управление серверами\n\n" +
+			"Нажмите /start для начала работы",
+	})
+	if err != nil {
+		log.Printf("Ошибка установки описания бота: %v", err)
+	}
+
+	// 2. Установка краткого описания (отображается в списке чатов)
+	err = bot.SetMyShortDescription(ctx, &telego.SetMyShortDescriptionParams{
+		ShortDescription: "Бот для управления VPN - настройка, тестирование, управление серверами",
+	})
+	if err != nil {
+		log.Printf("Ошибка установки краткого описания бота: %v", err)
+	}
+
+	// 3. Установка команд меню (отображаются при вводе "/")
+	err = bot.SetMyCommands(ctx, &telego.SetMyCommandsParams{
+		Commands: []telego.BotCommand{
+			{
+				Command:     "start",
+				Description: "Начать работу с ботом",
+			},
+			{
+				Command:     "help",
+				Description: "Помощь и инструкции",
+			},
+		},
+	})
+	if err != nil {
+		log.Printf("Ошибка установки команд бота: %v", err)
+	}
+
+	// 2. Установка картинки бота (если нужно)
+	// Для этого нужно сначала загрузить картинку на сервер Telegram
+
 	// Helper function to check if user is authorized
 	isUserAuthorized := func(userID int64) bool {
 		for _, allowedID := range config.TgBot.AdminIds {
