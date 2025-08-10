@@ -29,6 +29,7 @@ type ChatResponse struct {
 	} `json:"choices"`
 }
 
+// https://platform.openai.com/settings/organization/api-keys
 func main() {
 	// Проверка прямого доступа к OpenAI API
 	fmt.Println("Проверка прямого доступа к OpenAI API...")

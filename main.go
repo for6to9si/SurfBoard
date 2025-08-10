@@ -14,6 +14,7 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"log"
 	"os"
+	"sync"
 )
 
 func getLang() string {
@@ -185,6 +186,73 @@ func main() {
 		return nil
 	}, th.CommandEqual("start"))
 
+	type State uint
+
+	const (
+		StateDefault State = iota
+		StateBenchmark
+		StateXray
+		StateSingBox
+	)
+
+	type User struct {
+		State State
+	}
+
+	users := make(map[int64]User)
+	// Since this is in-memory storage, we must use mutex
+	lock := sync.RWMutex{}
+
+	bh.HandleMessage(func(ctx *th.Context, message telego.Message) error {
+
+		loc := locale.Getlocalizer(message.From.LanguageCode)
+
+		// Check if user is authorized
+		if !isUserAuthorized(message.From.ID) {
+
+			accessDenied, _ := loc.Localize(&i18n.LocalizeConfig{
+				MessageID: "access_denied",
+				TemplateData: map[string]interface{}{
+					"UserID": message.From.ID,
+				},
+			})
+
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(message.Chat.ID),
+				accessDenied,
+			))
+			return nil
+		}
+
+		userID := message.From.ID
+
+		lock.RLock()
+		user := users[userID]
+		lock.RUnlock()
+
+		var text string
+		switch user.State {
+		case StateDefault:
+			text = "не выбрано"
+			text = benchmarkMode.Go([]string{message.Text})[0]
+		case StateBenchmark:
+			text = "Thanks for your data!"
+		case StateXray:
+			text = "StateXray!"
+		case StateSingBox:
+			text = "StateSingBox!"
+		default:
+			panic("unknown state")
+		}
+
+		lock.Lock()
+		users[userID] = user
+		lock.Unlock()
+
+		_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), text))
+		return nil
+	})
+
 	bh.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
 
 		loc := locale.Getlocalizer(query.From.LanguageCode)
@@ -206,6 +274,12 @@ func main() {
 			return nil
 		}
 
+		userID := query.From.ID
+
+		lock.RLock()
+		user := users[userID]
+		lock.RUnlock()
+
 		currentVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "current_vpn"})
 		allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
 		addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
@@ -218,6 +292,7 @@ func main() {
 		switch query.Data {
 		case "xray_vpn":
 			// Отображаем скрытые кнопки
+			user.State = StateXray
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
 				"Second VPN options:",
@@ -230,6 +305,7 @@ func main() {
 
 		case "benchmark_vpn":
 
+			user.State = StateBenchmark
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
 				"Benchmark mode selected",
@@ -259,6 +335,7 @@ func main() {
 			}
 
 		case "singbox_vpn":
+			user.State = StateSingBox
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
 				underDevelopment,
@@ -268,6 +345,7 @@ func main() {
 
 		case "back_to_main":
 			// Возвращаемся к начальному меню
+			user.State = StateDefault
 			inlineKeyboard := greetUser(config)
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
@@ -304,6 +382,10 @@ func main() {
 				unknownCommand,
 			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
 		}
+
+		lock.Lock()
+		users[userID] = user
+		lock.Unlock()
 
 		_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID).WithText(done))
 		return nil
