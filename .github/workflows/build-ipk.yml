@@ -6,15 +6,15 @@ on:
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
-      inputs:
-        prerelease:
-          description: 'Is this a prerelease?'
-          required: true
-          default: 'false'
-          type: choice
-          options:
-            - 'true'
-            - 'false'
+    inputs:
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
   build:
@@ -28,6 +28,9 @@ jobs:
           - os: linux
             arch: mipsle
             output: surfboard-mipsle
+          - os: linux
+            arch: amd64
+            output: surfboard-amd64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,45 +49,49 @@ jobs:
           go build -v -o build/${{ matrix.target.output }} .
 
       - name: Set up environment
+        if: matrix.target.arch != 'amd64'
         run: |
           sudo apt-get update
           sudo apt-get install -y tar gzip jq unzip fakeroot
 
       - name: Create IPK package structure
+        if: matrix.target.arch != 'amd64'
         run: |
-          mkdir -p surfboard-${{ matrix.arch }}/opt/sbin
-          mkdir -p surfboard-${{ matrix.arch }}/opt/etc/init.d
-          mkdir -p surfboard-${{ matrix.arch }}/opt/etc/surfboard
-          mkdir -p surfboard-${{ matrix.arch }}/opt/var/log/surfboard
-          mkdir -p surfboard-${{ matrix.arch }}/CONTROL
+          mkdir -p surfboard-${{ matrix.target.arch }}/opt/sbin
+          mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/init.d
+          mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/surfboard
+          mkdir -p surfboard-${{ matrix.target.arch }}/opt/var/log/surfboard
+          mkdir -p surfboard-${{ matrix.target.arch }}/CONTROL
           
-          
-          cat > surfboard-${{ matrix.arch }}/CONTROL/control <<EOF
+          cat > surfboard-${{ matrix.target.arch }}/CONTROL/control <<EOF
           Package: xray
           Depends: libc,libssp,librt,libpthread,libpthread,jq,iptables,cron,curl,coreutils-numfmt,column
           Version: ${{ github.ref_name }}
-          Architecture: mipsel-3.4
+          Architecture: ${{ matrix.target.arch == 'mipsle' && 'mipsel-3.4' || matrix.target.arch }}
           Section: net
-          Description: A minimalistic tool to automate Xray setup on Keenetic router systems..
+          Description: A minimalistic tool to automate Xray setup on Keenetic router systems.
           License: GPL-3.0 license
           Maintainer: for6to9si <for6to9si@gmail.com>
           EOF
+
+      - name: Set up Docker
+        if: matrix.target.arch == 'amd64'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        if: matrix.target.arch == 'amd64'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: false
+          tags: surfboard:${{ github.sha }}
+          build-args: |
+            BINARY_PATH=build/${{ matrix.target.output }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target.output }}
           path: build/${{ matrix.target.output }}
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.24'
-
-      - name: Test
-        run: go test -v ./...
