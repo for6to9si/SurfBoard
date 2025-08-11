@@ -73,25 +73,24 @@ func decodeURLComment(comment string) (string, error) {
 
 // Go function parses VLESS URIs and returns formatted JSON strings
 func Go(vlessURI []string) []string {
+	var results []string
 
 	for i, input := range vlessURI {
-
 		// Check if config is already a JSON string
 		var jsonData []byte
 		var err error
 
 		// Обработка каждой строки
-
 		comment := extractComment(input)
 		if comment == "" {
-			fmt.Printf("Строка %d: Пропущена (нет комментария после #)\n", i+1)
+			results = append(results, fmt.Sprintf("Строка %d: Пропущена (нет комментария после #)", i+1))
 			continue
 		}
 
 		// Декодируем URL-кодированную строку
 		decodedComment, err := decodeURLComment(comment)
 		if err != nil {
-			fmt.Printf("Строка %d: Ошибка декодирования: %v\n", i+1, err)
+			results = append(results, fmt.Sprintf("Строка %d: Ошибка декодирования: %v", i+1, err))
 			continue
 		}
 
@@ -102,44 +101,29 @@ func Go(vlessURI []string) []string {
 		// Get the outbound configuration
 		config := ob.GetOutboundStr()
 
-		// Check if config is already a JSON string
-		//var jsonData []byte
-		//var err error
-
 		// Try to treat config as a JSON string first
 		var temp map[string]interface{}
 		if err := json.Unmarshal([]byte(config), &temp); err == nil {
-			// If config is a valid JSON string, re-serialize it with proper formattin
+			// If config is a valid JSON string, re-serialize it with proper formatting
 			temp["tag"] = decodedComment
 			jsonData, err = json.MarshalIndent(temp, "", "  ")
 		} else {
+			// If config is not a JSON string, create a new structure
+			temp = make(map[string]interface{})
+			temp["config"] = config
 			temp["tag"] = decodedComment
-			// If config is not a JSON string, assume it's a struct and serialize it
-			jsonData, err = json.MarshalIndent(config, "", "  ")
+			jsonData, err = json.MarshalIndent(temp, "", "  ")
 		}
 
 		if err != nil {
-			fmt.Printf("Error serializing to JSON: %v\n", err)
-			return
+			results = append(results, fmt.Sprintf("Error serializing to JSON: %v", err))
+			continue
 		}
 
-		// Print the formatted JSON to console
-		fmt.Println(string(jsonData))
-
-		fmt.Printf("Строка %d: %s\n", i+1, decodedComment)
-		err = createFile(decodedComment)
-		if err != nil {
-			fmt.Printf("Ошибка при создании файла для строки %d: %v\n", i+1, err)
-		} else {
-			fmt.Printf("Файл '%s' успешно создан\n", replaceInvalidChars(decodedComment))
-		}
-
-		// Save the formatted JSON to a file for verification
-		err = os.WriteFile(decodedComment, jsonData, 0644)
-		if err != nil {
-			fmt.Printf("Error writing to file: %v\n", err)
-			return
-		}
-		fmt.Println("JSON configuration saved to %v\n", decodedComment)
+		// Add the formatted JSON to results
+		results = append(results, string(jsonData))
+		results = append(results, fmt.Sprintf("Строка %d: %s", i+1, decodedComment))
 	}
+
+	return results
 }
