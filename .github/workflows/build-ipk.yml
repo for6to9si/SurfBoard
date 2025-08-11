@@ -46,7 +46,12 @@ jobs:
           GOARCH: ${{ matrix.target.arch }}
           GOMIPS: softfloat  # optional, depending on your target device
         run: |
+          mkdir -p build
           go build -v -o build/${{ matrix.target.output }} .
+
+      - name: Verify build output
+        run: |
+          ls -la build/
 
       - name: Set up environment
         if: matrix.target.arch != 'amd64'
@@ -65,7 +70,7 @@ jobs:
           
           cat > surfboard-${{ matrix.target.arch }}/CONTROL/control <<EOF
           Package: xray
-          Depends: libc,libssp,librt,libpthread,libpthread,jq,iptables,cron,curl,coreutils-numfmt,column
+          Depends: libc,libssp,librt,libpthread,jq,iptables,cron,curl,coreutils-numfmt,column
           Version: ${{ github.ref_name }}
           Architecture: ${{ matrix.target.arch == 'mipsle' && 'mipsel-3.4' || matrix.target.arch }}
           Section: net
@@ -78,6 +83,12 @@ jobs:
         if: matrix.target.arch == 'amd64'
         uses: docker/setup-buildx-action@v3
 
+      - name: Debug working directory
+        if: matrix.target.arch == 'amd64'
+        run: |
+          pwd
+          ls -la
+
       - name: Build and push Docker image
         if: matrix.target.arch == 'amd64'
         uses: docker/build-push-action@v5
@@ -89,6 +100,7 @@ jobs:
           tags: surfboard:${{ github.sha }}
           build-args: |
             BINARY_PATH=build/${{ matrix.target.output }}
+          no-cache: true
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
