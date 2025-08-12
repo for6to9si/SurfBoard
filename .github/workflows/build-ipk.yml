@@ -92,7 +92,7 @@ jobs:
       - name: Set TAG_VERSION
         if: matrix.target.arch == 'amd64'
         run: |
-          echo "TAG_VERSION=$(date +%Y%m%d)" >> $GITHUB_ENV
+          echo "TAG_VERSION=v$(date +%y.%-m.%-d)" >> $GITHUB_ENV
 
       - name: Log in to DockerHub
         if: matrix.target.arch == 'amd64'
