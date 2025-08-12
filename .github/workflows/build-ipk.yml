@@ -44,7 +44,7 @@ jobs:
         env:
           GOOS: ${{ matrix.target.os }}
           GOARCH: ${{ matrix.target.arch }}
-          GOMIPS: softfloat  # optional, depending on your target device
+          GOMIPS: softfloat
         run: |
           mkdir -p build
           go build -v -o build/${{ matrix.target.output }} .
@@ -101,6 +101,18 @@ jobs:
           build-args: |
             BINARY_PATH=build/${{ matrix.target.output }}
           no-cache: true
+
+      - name: Save Docker image as artifact
+        if: matrix.target.arch == 'amd64'
+        run: |
+          docker save surfboard:${{ github.sha }} > surfboard-${{ github.sha }}.tar
+
+      - name: Upload Docker image artifact
+        if: matrix.target.arch == 'amd64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-surfboard-${{ github.sha }}
+          path: surfboard-${{ github.sha }}.tar
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
