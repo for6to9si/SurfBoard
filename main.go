@@ -3,18 +3,19 @@ package main
 import (
 	"SurfBoard/benchmarkMode"
 	"SurfBoard/conf"
+	"SurfBoard/grpcClient"
 	"SurfBoard/locale"
-	"SurfBoard/xrayclient"
 	"context"
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"sync"
+
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"log"
-	"os"
-	"sync"
 )
 
 func getLang() string {
@@ -71,14 +72,27 @@ func main() {
 	}
 
 	// Конфигурация для первого xray-сервера
-	client1, err := xrayclient.NewXrayClient(config.XwayConf.Grpc)
+	xraygRpcclient, err := grpcClient.NewGRpcClient(config.XwayConf.Grpc)
 
 	if err != nil {
 		log.Fatalf("Ошибка создания первого XrayClient: %v", err)
 	}
 
 	defer func() {
-		if err := client1.Close(); err != nil {
+		if err := xraygRpcclient.Close(); err != nil {
+			log.Printf("Ошибка закрытия первого XrayClient: %v", err)
+		}
+	}()
+
+	// Конфигурация для первого xray-сервера
+	benchmarkclient, err := grpcClient.NewGRpcClient(config.BenchmarkSettings.Grpc)
+
+	if err != nil {
+		log.Fatalf("Ошибка создания первого XrayClient: %v", err)
+	}
+
+	defer func() {
+		if err := benchmarkclient.Close(); err != nil {
 			log.Printf("Ошибка закрытия первого XrayClient: %v", err)
 		}
 	}()
@@ -297,11 +311,16 @@ func main() {
 				tu.ID(query.Message.GetChat().ID),
 				"Second VPN options:",
 			).WithReplyMarkup(tu.InlineKeyboard(
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("current_vpn")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("xray_current_vpn")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("xray_all_vpns")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
+
+		case "xray_current_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(xraygRpcclient)))
+		case "xray_all_vpns":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(xraygRpcclient)))
 
 		case "benchmark_vpn":
 
@@ -368,11 +387,11 @@ func main() {
 			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
 				return err
 			}
-		case "current_vpn":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(client1)))
-		case "all_vpns":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(client1)))
-		case "add_vpn":
+		case "benchmark_current_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(benchmarkclient)))
+		case "benchmark_all_vpns":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(benchmarkclient)))
+		case "benchmark_add_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN()))
 		default:
 			unknownCommand, _ := loc.LocalizeMessage(&i18n.Message{ID: "unknown_command"})
@@ -405,8 +424,8 @@ func createBenchmarkKeyboard(allVPNs, addVPN string, isXrayRunning bool) [][]tel
 
 	return [][]telego.InlineKeyboardButton{
 		{tu.InlineKeyboardButton(buttonText).WithCallbackData(buttonData)},
-		{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
-		{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
+		{tu.InlineKeyboardButton(allVPNs).WithCallbackData("benchmark_all_vpns")},
+		{tu.InlineKeyboardButton(addVPN).WithCallbackData("benchmark_add_vpn")},
 		{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
 		{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
 	}
@@ -421,8 +440,8 @@ func handleFastVPNTest(ctx *th.Context, query telego.CallbackQuery, bot *telego.
 	if benchmarkMode.IsXrayRunning() {
 		inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("⏹️ Стоп").WithCallbackData("benchmark_stop_xray")}
 		inlineKeyboard = append(inlineKeyboard,
-			[]telego.InlineKeyboardButton{tu.InlineKeyboardButton(allVPNs).WithCallbackData("all_vpns")},
-			[]telego.InlineKeyboardButton{tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")},
+			[]telego.InlineKeyboardButton{tu.InlineKeyboardButton(allVPNs).WithCallbackData("benchmark_all_vpns")},
+			[]telego.InlineKeyboardButton{tu.InlineKeyboardButton(addVPN).WithCallbackData("benchmark_add_vpn")},
 		)
 	}
 
@@ -460,11 +479,11 @@ func greetUser(config *conf.Config) [][]telego.InlineKeyboardButton {
 }
 
 // 🧩 Заглушки под VPN-логику
-func getCurrentVPN(client *xrayclient.XrayClient) string {
+func getCurrentVPN(client *grpcClient.GRpcClient) string {
 	return "🌍 Текущий VPN: " + client.GetCurrentVPN()
 }
 
-func listAllVPNs(client *xrayclient.XrayClient) string {
+func listAllVPNs(client *grpcClient.GRpcClient) string {
 	return client.ListVPNStatuses()
 }
 

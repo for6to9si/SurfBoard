@@ -1,4 +1,4 @@
-package xrayclient
+package grpcClient
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"SurfBoard/conf"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -16,16 +17,16 @@ import (
 	pbRoute "github.com/xtls/xray-core/app/router/command"
 )
 
-// XrayClient представляет клиента для взаимодействия с Xray gRPC-сервером
-type XrayClient struct {
+// GRpcClient представляет клиента для взаимодействия с Xray gRPC-сервером
+type GRpcClient struct {
 	address string
 	conn    *grpc.ClientConn
 }
 
-// NewXrayClient создаёт новый экземпляр XrayClient с установленным gRPC-соединением
-func NewXrayClient(grpcConfig conf.Grpc) (*XrayClient, error) {
+// NewGRpcClient создаёт новый экземпляр GRpcClient с установленным gRPC-соединением
+func NewGRpcClient(grpcConfig conf.Grpc) (*GRpcClient, error) {
 	address := fmt.Sprintf("dns:///%s:%d", grpcConfig.Target.IP, grpcConfig.Target.Port)
-	fmt.Printf("Создан XrayClient с IP: %s, Port: %d\n", grpcConfig.Target.IP, grpcConfig.Target.Port)
+	fmt.Printf("Создан GRpcClient с IP: %s, Port: %d\n", grpcConfig.Target.IP, grpcConfig.Target.Port)
 
 	conn, err := grpc.NewClient(address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -33,14 +34,14 @@ func NewXrayClient(grpcConfig conf.Grpc) (*XrayClient, error) {
 		return nil, fmt.Errorf("ошибка подключения к Xray: %v", err)
 	}
 
-	return &XrayClient{
+	return &GRpcClient{
 		address: address,
 		conn:    conn,
 	}, nil
 }
 
 // Close закрывает gRPC-соединение
-func (c *XrayClient) Close() error {
+func (c *GRpcClient) Close() error {
 	if c.conn != nil {
 		err := c.conn.Close()
 		c.conn = nil
@@ -50,7 +51,7 @@ func (c *XrayClient) Close() error {
 }
 
 // ListVPNStatuses возвращает статус всех Outbound-соединений
-func (c *XrayClient) ListVPNStatuses() string {
+func (c *GRpcClient) ListVPNStatuses() string {
 	if c.conn == nil {
 		log.Printf("Xray: соединение не инициализировано")
 		return "⚠️ Соединение не инициализировано"
@@ -91,7 +92,7 @@ func (c *XrayClient) ListVPNStatuses() string {
 }
 
 // GetCurrentVPN возвращает текущий активный VPN
-func (c *XrayClient) GetCurrentVPN() string {
+func (c *GRpcClient) GetCurrentVPN() string {
 	if c.conn == nil {
 		log.Printf("Xray: соединение не инициализировано")
 		return "⚠️ Соединение не инициализировано"
