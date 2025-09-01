@@ -3,32 +3,63 @@ package benchmarkMode
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/for6to9si/vpnparser/pkgs/outbound"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/for6to9si/vpnparser/pkgs/outbound"
 )
 
 // replaceInvalidChars заменяет недопустимые символы в имени файла на подчёркивания
-func replaceInvalidChars(name string) string {
+func replaceInvalidChars(name string) (string, error) {
+	// Рекурсивно декодируем URL-кодированные символы
+	decodedName := name
+	for {
+		newDecoded, err := url.QueryUnescape(decodedName)
+		if err != nil || newDecoded == decodedName {
+			break
+		}
+		decodedName = newDecoded
+	}
+
 	// Недопустимые символы для имён файлов в большинстве ОС
 	invalidChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|", "\n", "\r", "\t"}
+
 	// Заменяем недопустимые символы
 	for _, char := range invalidChars {
-		name = strings.ReplaceAll(name, char, "_")
+		decodedName = strings.ReplaceAll(decodedName, char, "_")
 	}
-	// Удаляем или заменяем непечатаемые символы и пробелы в начале/конце
+
+	// Удаляем или заменяем непечатаемые символы и эмодзи
 	var result strings.Builder
-	for _, r := range name {
+	for _, r := range decodedName {
 		if unicode.IsPrint(r) && !unicode.IsControl(r) {
 			result.WriteRune(r)
 		} else {
 			result.WriteRune('_')
 		}
 	}
+
 	// Удаляем пробелы в начале и конце
-	return strings.TrimSpace(result.String())
+	cleaned := strings.TrimSpace(result.String())
+
+	// Удаляем повторяющиеся подчёркивания
+	cleaned = strings.ReplaceAll(cleaned, "__", "_")
+	cleaned = strings.ReplaceAll(cleaned, "__", "_") // Дважды на случай тройных
+
+	// Ограничиваем длину имени файла
+	if len(cleaned) > 100 {
+		cleaned = cleaned[:100]
+	}
+
+	// Если после всех преобразований имя пустое, создаем дефолтное
+	if cleaned == "" {
+		cleaned = "unnamed_config"
+	}
+
+	return cleaned, nil
 }
 
 func extractComment(input string) string {
@@ -38,27 +69,6 @@ func extractComment(input string) string {
 		return parts[1]
 	}
 	return ""
-}
-
-func createFile(filename string) error {
-	// Очищаем имя файла от недопустимых символов
-	cleanedFilename := replaceInvalidChars(filename)
-	if cleanedFilename == "" {
-		return fmt.Errorf("имя файла пустое после очистки")
-	}
-
-	// Проверяем длину имени файла
-	if len(cleanedFilename) > 255 {
-		cleanedFilename = cleanedFilename[:255]
-	}
-
-	// Создаём файл
-	file, err := os.Create(cleanedFilename)
-	if err != nil {
-		return fmt.Errorf("ошибка при создании файла '%s': %v", cleanedFilename, err)
-	}
-	defer file.Close()
-	return nil
 }
 
 // decodeURLComment декодирует URL-кодированную строку
@@ -71,16 +81,14 @@ func decodeURLComment(comment string) (string, error) {
 	return decoded, nil
 }
 
-// Go function parses VLESS URIs and returns formatted JSON strings
-func Go(vlessURI []string) []string {
+// Parses function parses VLESS URIs and returns formatted JSON strings
+func Parses(vlessURI []string, path string) []string {
 	var results []string
 
 	for i, input := range vlessURI {
-		// Check if config is already a JSON string
-		var jsonData []byte
-		var err error
 
 		// Обработка каждой строки
+
 		comment := extractComment(input)
 		if comment == "" {
 			results = append(results, fmt.Sprintf("Строка %d: Пропущена (нет комментария после #)", i+1))
@@ -88,41 +96,93 @@ func Go(vlessURI []string) []string {
 		}
 
 		// Декодируем URL-кодированную строку
-		decodedComment, err := decodeURLComment(comment)
+		decodedComment, err := replaceInvalidChars(comment)
 		if err != nil {
 			results = append(results, fmt.Sprintf("Строка %d: Ошибка декодирования: %v", i+1, err))
 			continue
 		}
 
-		// Initialize and parse outbound configuration
+		// Инициализируем и парсим конфигурацию (с обработкой ошибок)
 		ob := outbound.GetOutbound(outbound.XrayCore, input)
-		ob.Parse(input)
+		if ob == nil {
+			results = append(results, fmt.Sprintf("Строка %d: Неподдерживаемый протокол: %s\n", i+1, input))
+			continue
+		}
+		// Парсим с обработкой паники
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					results = append(results, fmt.Sprintf("Строка %d: Ошибка парсинга (panic recovered): %v\n", i+1, r))
+				}
+			}()
+			ob.Parse(input)
+		}()
 
 		// Get the outbound configuration
 		config := ob.GetOutboundStr()
 
-		// Try to treat config as a JSON string first
-		var temp map[string]interface{}
-		if err := json.Unmarshal([]byte(config), &temp); err == nil {
-			// If config is a valid JSON string, re-serialize it with proper formatting
-			temp["tag"] = decodedComment
-			jsonData, err = json.MarshalIndent(temp, "", "  ")
-		} else {
-			// If config is not a JSON string, create a new structure
-			temp = make(map[string]interface{})
-			temp["config"] = config
-			temp["tag"] = decodedComment
-			jsonData, err = json.MarshalIndent(temp, "", "  ")
-		}
-
-		if err != nil {
-			results = append(results, fmt.Sprintf("Error serializing to JSON: %v", err))
+		if config == "" {
+			results = append(results, fmt.Sprintf("Строка %d: Не удалось распарсить конфигурацию\n", i+1))
 			continue
 		}
 
-		// Add the formatted JSON to results
+		// Check if config is already a JSON string
+		var jsonData []byte
+		//var err error
+
+		// Try to treat config as a JSON string first
+		var temp map[string]interface{}
+		if err := json.Unmarshal([]byte(config), &temp); err == nil {
+			// If config is a valid JSON string, re-serialize it with proper formattin
+			temp["tag"] = decodedComment
+
+			// Создаем структуру с outbounds
+			outboundWrapper := map[string]interface{}{
+				"outbounds": []interface{}{temp},
+			}
+
+			jsonData, err = json.MarshalIndent(outboundWrapper, "", "  ")
+		} else {
+			// Если config не JSON, создаем новый объект
+			temp = map[string]interface{}{
+				"config": config,
+				"tag":    decodedComment,
+			}
+
+			// Обертываем в outbounds
+			outboundWrapper := map[string]interface{}{
+				"outbounds": []interface{}{temp},
+			}
+			// If config is not a JSON string, assume it's a struct and serialize it
+			jsonData, err = json.MarshalIndent(outboundWrapper, "", "  ")
+		}
+
+		// Print the formatted JSON to console
 		results = append(results, string(jsonData))
 		results = append(results, fmt.Sprintf("Строка %d: %s", i+1, decodedComment))
+
+		//err = createFile(decodedComment)
+		//if err != nil {
+		//	fmt.Printf("Ошибка при создании файла для строки %d: %v\n", i+1, err)
+		//} else {
+		//	fmt.Printf("Файл '%s' успешно создан\n", decodedComment)
+		//}
+
+		// Создаем файл с очищенным именем
+		cleanedName, err := replaceInvalidChars(decodedComment)
+		if cleanedName == "" {
+			cleanedName = fmt.Sprintf("config_%d", i+1)
+		}
+
+		// Формируем полный путь к файлу
+		fullpath := filepath.Join(path, cleanedName+".json")
+
+		// Save the formatted JSON to a file for verification
+		err = os.WriteFile(fullpath, jsonData, 0644)
+		if err != nil {
+			fmt.Printf("Error writing to file: %v\n", err)
+		}
+		fmt.Println("JSON configuration saved to %v\n", decodedComment)
 	}
 
 	return results

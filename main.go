@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/mymmrac/telego"
@@ -245,10 +246,35 @@ func main() {
 		lock.RUnlock()
 
 		var text string
+		// Фильтруем пустые строки
+		var filteredLines []string
+
+		// Check if config is already a JSON string
+		var jsonData []string
+
 		switch user.State {
 		case StateDefault:
 			text = "не выбрано"
-			text = benchmarkMode.Go([]string{message.Text})[0]
+			lines := strings.Split(message.Text, "\n")
+
+			for _, line := range lines {
+				trimmed := strings.TrimSpace(line)
+				if trimmed != "" {
+					filteredLines = append(filteredLines, trimmed)
+				}
+			}
+
+			jsonData = benchmarkMode.Parses(filteredLines, config.BenchmarkSettings.Env.XrayLocationConfdir)
+
+			for _, line := range jsonData {
+				// Пропускаем пустые строки, если они есть
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+
+				_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
+			}
+
 		case StateBenchmark:
 			text = "Thanks for your data!"
 		case StateXray:
@@ -313,7 +339,7 @@ func main() {
 			).WithReplyMarkup(tu.InlineKeyboard(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("xray_current_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("xray_all_vpns")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("add_vpn")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("xray_add_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
 
@@ -321,6 +347,8 @@ func main() {
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(xraygRpcclient)))
 		case "xray_all_vpns":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(xraygRpcclient)))
+		case "xray_add_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(xraygRpcclient)))
 
 		case "benchmark_vpn":
 
@@ -392,7 +420,7 @@ func main() {
 		case "benchmark_all_vpns":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(benchmarkclient)))
 		case "benchmark_add_vpn":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN()))
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(benchmarkclient)))
 		default:
 			unknownCommand, _ := loc.LocalizeMessage(&i18n.Message{ID: "unknown_command"})
 			inlineKeyboard := greetUser(config)
@@ -487,6 +515,6 @@ func listAllVPNs(client *grpcClient.GRpcClient) string {
 	return client.ListVPNStatuses()
 }
 
-func addNewVPN() string {
-	return "[Добавление нового VPN]"
+func addNewVPN(client *grpcClient.GRpcClient) string {
+	return client.ListVPNStatuses()
 }
