@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/for6to9si/vpnparser/pkgs/outbound"
@@ -54,11 +55,6 @@ func replaceInvalidChars(name string) (string, error) {
 		cleaned = cleaned[:100]
 	}
 
-	// Если после всех преобразований имя пустое, создаем дефолтное
-	if cleaned == "" {
-		cleaned = "unnamed_config"
-	}
-
 	return cleaned, nil
 }
 
@@ -92,7 +88,6 @@ func Parses(vlessURI []string, path string) []string {
 		comment := extractComment(input)
 		if comment == "" {
 			results = append(results, fmt.Sprintf("Строка %d: Пропущена (нет комментария после #)", i+1))
-			continue
 		}
 
 		// Декодируем URL-кодированную строку
@@ -172,10 +167,12 @@ func Parses(vlessURI []string, path string) []string {
 		cleanedName, err := replaceInvalidChars(decodedComment)
 		if cleanedName == "" {
 			cleanedName = fmt.Sprintf("config_%d", i+1)
+			timestamp := time.Now().Format("20060102_150405") // ГГГГММДД_ЧЧММСС
+			cleanedName = fmt.Sprintf("%s_%s", timestamp, cleanedName)
 		}
 
 		// Формируем полный путь к файлу
-		fullpath := filepath.Join(path, cleanedName+".json")
+		fullpath := filepath.Join(path, "!"+cleanedName+".json")
 
 		// Save the formatted JSON to a file for verification
 		err = os.WriteFile(fullpath, jsonData, 0644)
