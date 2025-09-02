@@ -88,6 +88,9 @@ func Parses(vlessURI []string, path string) []string {
 		comment := extractComment(input)
 		if comment == "" {
 			results = append(results, fmt.Sprintf("Строка %d: Пропущена (нет комментария после #)", i+1))
+			comment = fmt.Sprintf("config_%d", i+1)
+			timestamp := time.Now().Format("20060102_150405") // ГГГГММДД_ЧЧММСС
+			comment = fmt.Sprintf("%s", timestamp)
 		}
 
 		// Декодируем URL-кодированную строку
@@ -129,6 +132,8 @@ func Parses(vlessURI []string, path string) []string {
 		var temp map[string]interface{}
 		if err := json.Unmarshal([]byte(config), &temp); err == nil {
 			// If config is a valid JSON string, re-serialize it with proper formattin
+
+			decodedComment = fmt.Sprintf("%s_%s_%d", decodedComment, temp["protocol"], i+1)
 			temp["tag"] = decodedComment
 
 			// Создаем структуру с outbounds
@@ -167,8 +172,6 @@ func Parses(vlessURI []string, path string) []string {
 		cleanedName, err := replaceInvalidChars(decodedComment)
 		if cleanedName == "" {
 			cleanedName = fmt.Sprintf("config_%d", i+1)
-			timestamp := time.Now().Format("20060102_150405") // ГГГГММДД_ЧЧММСС
-			cleanedName = fmt.Sprintf("%s_%s", timestamp, cleanedName)
 		}
 
 		// Формируем полный путь к файлу

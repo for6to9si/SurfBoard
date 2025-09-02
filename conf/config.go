@@ -4,8 +4,9 @@ import (
 	"SurfBoard/locale"
 	"encoding/json"
 	"fmt"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"os"
+
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 // Структуры конфигурации сделал автоматом https://mholt.github.io/json-to-go/
@@ -30,11 +31,12 @@ type Paths struct {
 	SingboxlockFile   string `json:"singboxlockFile"`
 }
 type Env struct {
-	XrayLocationAsset      string `json:"XRAY_LOCATION_ASSET"`
-	XrayLocationConfdir    string `json:"XRAY_LOCATION_CONFDIR"`
-	XrayRayBufferSize      int    `json:"XRAY_RAY_BUFFER_SIZE"`
-	SslCertDir             string `json:"SSL_CERT_DIR"`
-	SingboxLocationConfdir string `json:"SINGBOX_LOCATION_CONFDIR"`
+	XrayLocationAsset       string `json:"XRAY_LOCATION_ASSET"`
+	XrayLocationConfdir     string `json:"XRAY_LOCATION_CONFDIR"`
+	XrayLocationTemplatedir string `json:"XRAY_LOCATION_TEMPLATEDIR"`
+	XrayRayBufferSize       int    `json:"XRAY_RAY_BUFFER_SIZE"`
+	SslCertDir              string `json:"SSL_CERT_DIR"`
+	SingboxLocationConfdir  string `json:"SINGBOX_LOCATION_CONFDIR"`
 }
 type Target struct {
 	IP   string `json:"ip"`
