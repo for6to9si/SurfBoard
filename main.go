@@ -252,6 +252,8 @@ func main() {
 		// Check if config is already a JSON string
 		var jsonData []string
 
+		var tags []string
+
 		switch user.State {
 		case StateDefault:
 			text = "не выбрано"
@@ -264,9 +266,18 @@ func main() {
 				}
 			}
 
-			jsonData = benchmarkMode.Parses(filteredLines, config.BenchmarkSettings.Env.XrayLocationConfdir)
+			jsonData, tags = benchmarkMode.Parses(filteredLines, config.BenchmarkSettings.Env.XrayLocationConfdir)
 
 			for _, line := range jsonData {
+				// Пропускаем пустые строки, если они есть
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+
+				_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
+			}
+
+			for _, line := range tags {
 				// Пропускаем пустые строки, если они есть
 				if strings.TrimSpace(line) == "" {
 					continue

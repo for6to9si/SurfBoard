@@ -78,8 +78,9 @@ func decodeURLComment(comment string) (string, error) {
 }
 
 // Parses function parses VLESS URIs and returns formatted JSON strings
-func Parses(vlessURI []string, path string) []string {
+func Parses(vlessURI []string, path string) ([]string, []string) {
 	var results []string
+	var tags []string
 
 	for i, input := range vlessURI {
 
@@ -161,6 +162,9 @@ func Parses(vlessURI []string, path string) []string {
 		results = append(results, string(jsonData))
 		results = append(results, fmt.Sprintf("Строка %d: %s", i+1, decodedComment))
 
+		// сохраняем комментарий
+		tags = append(tags, decodedComment)
+
 		//err = createFile(decodedComment)
 		//if err != nil {
 		//	fmt.Printf("Ошибка при создании файла для строки %d: %v\n", i+1, err)
@@ -185,5 +189,5 @@ func Parses(vlessURI []string, path string) []string {
 		fmt.Println("JSON configuration saved to %v\n", decodedComment)
 	}
 
-	return results
+	return results, tags
 }
