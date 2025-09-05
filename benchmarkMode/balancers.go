@@ -20,7 +20,8 @@ type Config struct {
 	} `json:"burstObservatory"`
 
 	Routing struct {
-		Balancers []struct {
+		DomainStrategy string `json:"domainStrategy,omitempty"`
+		Balancers      []struct {
 			Tag      string   `json:"tag"`
 			Selector []string `json:"selector"`
 			Fallback string   `json:"fallbackTag"`
@@ -28,6 +29,7 @@ type Config struct {
 				Type string `json:"type"`
 			} `json:"strategy"`
 		} `json:"balancers"`
+		Rules []map[string]interface{} `json:"rules,omitempty"`
 	} `json:"routing"`
 }
 
@@ -52,13 +54,21 @@ func remove(slice []string, val string) []string {
 	return result
 }
 
-func ModifyBalancerJson(filename string) []string {
+// Функция очистки всех узлов
+func clearNodes(cfg *Config) {
+	cfg.BurstObservatory.SubjectSelector = []string{}
+	for i := range cfg.Routing.Balancers {
+		cfg.Routing.Balancers[i].Selector = []string{}
+	}
+}
+
+func ModifyBalancerJson(template string, filename string, tags []string) []string {
 
 	var results []string
 	// Читаем файл temp_config.json
-	data, err := os.ReadFile(filename)
+	data, err := os.ReadFile(template)
 	if err != nil {
-		results = append(results, fmt.Sprintf("не удалось открыть temp_config.json: %s", err))
+		results = append(results, fmt.Sprintf("не удалось открыть %s", template))
 	}
 
 	var cfg Config
@@ -66,14 +76,25 @@ func ModifyBalancerJson(filename string) []string {
 		results = append(results, fmt.Sprintf("ошибка парсинга JSON: %s", err))
 	}
 
-	// Добавляем новый узел
-	newNode := "trojan-france"
-	cfg.BurstObservatory.SubjectSelector = addUnique(cfg.BurstObservatory.SubjectSelector, newNode)
-	cfg.Routing.Balancers[0].Selector = addUnique(cfg.Routing.Balancers[0].Selector, newNode)
+	//Если нужно полностью очистить узлы:
+	//	clearNodes(&cfg)
+
+	// Добавляем все новые узлы
+	for _, node := range tags {
+		cfg.BurstObservatory.SubjectSelector = addUnique(cfg.BurstObservatory.SubjectSelector, node)
+		if len(cfg.Routing.Balancers) > 0 {
+			cfg.Routing.Balancers[0].Selector = addUnique(cfg.Routing.Balancers[0].Selector, node)
+		}
+	}
 
 	// Удаляем ненужный узел
-	cfg.BurstObservatory.SubjectSelector = remove(cfg.BurstObservatory.SubjectSelector, "test-vless")
-	cfg.Routing.Balancers[0].Selector = remove(cfg.Routing.Balancers[0].Selector, "test-vless")
+	//removeNodes := []string{"test-vless"}
+	//for _, node := range removeNodes {
+	//	cfg.BurstObservatory.SubjectSelector = remove(cfg.BurstObservatory.SubjectSelector, node)
+	//if len(cfg.Routing.Balancers) > 0 {
+	//	cfg.Routing.Balancers[0].Selector = remove(cfg.Routing.Balancers[0].Selector, node)
+	//}
+	//}
 
 	// Конвертируем обратно в JSON
 	output, err := json.MarshalIndent(cfg, "", "    ")
@@ -81,12 +102,12 @@ func ModifyBalancerJson(filename string) []string {
 		results = append(results, fmt.Sprintf("ошибка сериализации JSON: %s", err))
 	}
 
-	// Сохраняем результат в config.json
-	if err := os.WriteFile("config.json", output, 0644); err != nil {
-		results = append(results, fmt.Sprintf("не удалось записать config.json: %s", err))
+	// Сохраняем результат в routing-settings.generated.json
+	if err := os.WriteFile(filename, output, 0644); err != nil {
+		results = append(results, fmt.Sprintf("не удалось записать %s", filename))
 	}
 
-	results = append(results, fmt.Sprintf("✅ Сгенерирован новый config.json"))
+	results = append(results, fmt.Sprintf("✅ Сгенерирован новый %s", filename))
 
 	return results
 }

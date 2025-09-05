@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -278,6 +279,21 @@ func main() {
 			}
 
 			for _, line := range tags {
+				// Пропускаем пустые строки, если они есть
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+
+				_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
+			}
+
+			// Формируем полный путь к файлу
+			fulltempdir := filepath.Join(config.BenchmarkSettings.Env.XrayLocationTemplatedir, "routing-settings.generated.json")
+			fullpath := filepath.Join(config.BenchmarkSettings.Env.XrayLocationConfdir, "routing-settings.generated.json")
+
+			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags)
+
+			for _, line := range results {
 				// Пропускаем пустые строки, если они есть
 				if strings.TrimSpace(line) == "" {
 					continue
