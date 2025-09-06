@@ -78,7 +78,7 @@ func decodeURLComment(comment string) (string, error) {
 }
 
 // Parses function parses VLESS URIs and returns formatted JSON strings
-func Parses(vlessURI []string, path string) ([]string, []string) {
+func Parses(vlessURI []string, path string) []string {
 	var results []string
 	var tags []string
 
@@ -179,7 +179,7 @@ func Parses(vlessURI []string, path string) ([]string, []string) {
 		}
 
 		// Формируем полный путь к файлу
-		fullpath := filepath.Join(path, "!"+cleanedName+".json")
+		fullpath := filepath.Join(path, "!vpn"+cleanedName+".json")
 
 		// Save the formatted JSON to a file for verification
 		err = os.WriteFile(fullpath, jsonData, 0644)
@@ -189,5 +189,33 @@ func Parses(vlessURI []string, path string) ([]string, []string) {
 		fmt.Println("JSON configuration saved to %v\n", decodedComment)
 	}
 
-	return results, tags
+	return tags
+}
+
+func GetTags(path string) []string {
+	// директория, в которой ищем
+	dir := path
+
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		panic(err)
+	}
+
+	var result []string
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+
+		name := f.Name()
+
+		if strings.HasPrefix(name, "!vpn") && strings.HasSuffix(name, ".json") {
+			// убираем префикс и суффикс
+			trimmed := strings.TrimPrefix(name, "!vpn")
+			trimmed = strings.TrimSuffix(trimmed, ".json")
+			result = append(result, trimmed)
+		}
+	}
+
+	return result
 }

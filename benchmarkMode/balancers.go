@@ -62,6 +62,48 @@ func clearNodes(cfg *Config) {
 	}
 }
 
+// Функция добавления доменов в правила с balancerTag = bestVPN
+func AddDomainsToRules(cfg *Config, newDomains []string) {
+	for i, rule := range cfg.Routing.Rules {
+		// Проверяем inboundTag, balancerTag и type
+		if tags, ok := rule["inboundTag"].([]interface{}); ok {
+			match := false
+			expected := []string{"redirect", "tproxy", "socks-in"}
+			if len(tags) == len(expected) {
+				match = true
+				for j, t := range tags {
+					if t.(string) != expected[j] {
+						match = false
+						break
+					}
+				}
+			}
+			if match && rule["balancerTag"] == "bestVPN" && rule["type"] == "field" {
+				// Добавляем домены
+				if domains, ok := rule["domain"].([]interface{}); ok {
+					existing := make(map[string]bool)
+					for _, d := range domains {
+						existing[d.(string)] = true
+					}
+					for _, nd := range newDomains {
+						if !existing[nd] {
+							domains = append(domains, nd)
+						}
+					}
+					cfg.Routing.Rules[i]["domain"] = domains
+				} else {
+					// Если "domain" ещё нет — создаём
+					domains := []interface{}{}
+					for _, nd := range newDomains {
+						domains = append(domains, nd)
+					}
+					cfg.Routing.Rules[i]["domain"] = domains
+				}
+			}
+		}
+	}
+}
+
 func ModifyBalancerJson(template string, filename string, tags []string) []string {
 
 	var results []string
@@ -95,6 +137,10 @@ func ModifyBalancerJson(template string, filename string, tags []string) []strin
 	//	cfg.Routing.Balancers[0].Selector = remove(cfg.Routing.Balancers[0].Selector, node)
 	//}
 	//}
+
+	// Добавляем новые домены в rules
+	newDomains := []string{"domain:newsite.com", "domain:example.org"}
+	AddDomainsToRules(&cfg, newDomains)
 
 	// Конвертируем обратно в JSON
 	output, err := json.MarshalIndent(cfg, "", "    ")

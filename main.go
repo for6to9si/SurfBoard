@@ -250,14 +250,13 @@ func main() {
 		// Фильтруем пустые строки
 		var filteredLines []string
 
-		// Check if config is already a JSON string
-		var jsonData []string
-
 		var tags []string
 
 		switch user.State {
 		case StateDefault:
 			text = "не выбрано"
+		case StateBenchmark:
+			text = "Thanks for your data!"
 			lines := strings.Split(message.Text, "\n")
 
 			for _, line := range lines {
@@ -267,16 +266,7 @@ func main() {
 				}
 			}
 
-			jsonData, tags = benchmarkMode.Parses(filteredLines, config.BenchmarkSettings.Env.XrayLocationConfdir)
-
-			for _, line := range jsonData {
-				// Пропускаем пустые строки, если они есть
-				if strings.TrimSpace(line) == "" {
-					continue
-				}
-
-				_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
-			}
+			tags = benchmarkMode.Parses(filteredLines, config.BenchmarkSettings.Env.XrayLocationConfdir)
 
 			for _, line := range tags {
 				// Пропускаем пустые строки, если они есть
@@ -286,24 +276,6 @@ func main() {
 
 				_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
 			}
-
-			// Формируем полный путь к файлу
-			fulltempdir := filepath.Join(config.BenchmarkSettings.Env.XrayLocationTemplatedir, "routing-settings.generated.json")
-			fullpath := filepath.Join(config.BenchmarkSettings.Env.XrayLocationConfdir, "routing-settings.generated.json")
-
-			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags)
-
-			for _, line := range results {
-				// Пропускаем пустые строки, если они есть
-				if strings.TrimSpace(line) == "" {
-					continue
-				}
-
-				_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
-			}
-
-		case StateBenchmark:
-			text = "Thanks for your data!"
 		case StateXray:
 			text = "StateXray!"
 		case StateSingBox:
@@ -387,7 +359,7 @@ func main() {
 				InlineKeyboard: createBenchmarkKeyboard(allVPNs, addVPN, benchmarkMode.IsXrayRunning()),
 			}))
 
-		case "benchmark_vpn_on":
+		case "benchmark_vpn_on": //DO-TO Delete
 
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StartXray()))
 
@@ -427,6 +399,29 @@ func main() {
 			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
 
 		case "benchmark_start_xray":
+
+			tags := benchmarkMode.GetTags(config.BenchmarkSettings.Env.XrayLocationConfdir)
+			for _, line := range tags {
+				// Пропускаем пустые строки, если они есть
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
+			}
+
+			// Формируем полный путь к файлу
+			fulltempdir := filepath.Join(config.BenchmarkSettings.Env.XrayLocationTemplatedir, "routing-settings.generated.json")
+			fullpath := filepath.Join(config.BenchmarkSettings.Env.XrayLocationConfdir, "routing-settings.generated.json")
+
+			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags)
+
+			for _, line := range results {
+				// Пропускаем пустые строки, если они есть
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
+			}
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StartXray()))
 			// Вызываем функцию для fast_vpn_test
 			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
@@ -474,7 +469,7 @@ func createBenchmarkKeyboard(allVPNs, addVPN string, isXrayRunning bool) [][]tel
 	buttonData := "benchmark_vpn_off"
 	if !isXrayRunning {
 		buttonText = "▶️ Старт"
-		buttonData = "benchmark_vpn_on"
+		buttonData = "benchmark_start_xray"
 	}
 
 	return [][]telego.InlineKeyboardButton{
