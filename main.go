@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -259,6 +260,45 @@ func main() {
 			text = "Thanks for your data!"
 			lines := strings.Split(message.Text, "\n")
 
+			// Проверяем, не команда ли это set X
+			trimmedText := strings.TrimSpace(message.Text)
+			if strings.HasPrefix(trimmedText, "set ") {
+				parts := strings.SplitN(trimmedText, " ", 2)
+				if len(parts) == 2 {
+					indexStr := strings.TrimSpace(parts[1])
+					x, err := strconv.Atoi(indexStr)
+					if err != nil {
+						_, _ = bot.SendMessage(ctx, tu.Message(
+							message.Chat.ChatID(),
+							fmt.Sprintf("Ошибка: `%s` не является числом", indexStr),
+						))
+						break
+					}
+
+					// Получаем все теги
+					_, allTags := benchmarkclient.ListVPNStatuses()
+					//allTags := benchmarkMode.GetTags(config.BenchmarkSettings.Env.XrayLocationConfdir)
+
+					if x < 0 || x >= len(allTags) {
+						_, _ = bot.SendMessage(ctx, tu.Message(
+							message.Chat.ChatID(),
+							fmt.Sprintf("Ошибка: индекс %d вне диапазона (0..%d)", x, len(allTags)-1),
+						))
+						break
+					}
+
+					// Запускаем OverrideBalancerTarget
+					grpcClient.OverrideBalancerTarget(benchmarkclient, "bestVPN", allTags[x])
+
+					_, _ = bot.SendMessage(ctx, tu.Message(
+						message.Chat.ChatID(),
+						fmt.Sprintf("Balancer переопределён на: %s", allTags[x]),
+					))
+					break
+				}
+			}
+
+			// Если это не команда, то обрабатываем строки как раньше
 			for _, line := range lines {
 				trimmed := strings.TrimSpace(line)
 				if trimmed != "" {
@@ -356,7 +396,7 @@ func main() {
 				tu.ID(query.Message.GetChat().ID),
 				"Benchmark mode selected",
 			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
-				InlineKeyboard: createBenchmarkKeyboard(allVPNs, addVPN, benchmarkMode.IsXrayRunning()),
+				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
 			}))
 
 		case "benchmark_vpn_on": //DO-TO Delete
@@ -367,7 +407,7 @@ func main() {
 				tu.ID(query.Message.GetChat().ID),
 				"Benchmark mode selected",
 			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
-				InlineKeyboard: createBenchmarkKeyboard(allVPNs, addVPN, benchmarkMode.IsXrayRunning()),
+				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
 			}))
 
 		case "benchmark_vpn_off":
@@ -375,10 +415,12 @@ func main() {
 				tu.ID(query.Message.GetChat().ID),
 				benchmarkMode.StopXray(),
 			))
-			// Переход к fast_vpn_test
-			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
-				return err
-			}
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
+				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
+			}))
 
 		case "singbox_vpn":
 			user.State = StateSingBox
@@ -423,16 +465,23 @@ func main() {
 				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
 			}
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StartXray()))
-			// Вызываем функцию для fast_vpn_test
-			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
-				return err
-			}
+
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
+				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
+			}))
+
 		case "benchmark_stop_xray":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StopXray()))
-			// Вызываем функцию для fast_vpn_test
-			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
-				return err
-			}
+
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
+				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
+			}))
 		case "fast_vpn_test":
 			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
 				return err
@@ -464,7 +513,12 @@ func main() {
 }
 
 // Определяем функцию для создания клавиатуры для benchmark-режима
-func createBenchmarkKeyboard(allVPNs, addVPN string, isXrayRunning bool) [][]telego.InlineKeyboardButton {
+func createBenchmarkKeyboard(loc *i18n.Localizer, isXrayRunning bool) [][]telego.InlineKeyboardButton {
+
+	allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
+	addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
+	currentVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "current_vpn"})
+
 	buttonText := "⏹️ Стоп"
 	buttonData := "benchmark_vpn_off"
 	if !isXrayRunning {
@@ -475,6 +529,7 @@ func createBenchmarkKeyboard(allVPNs, addVPN string, isXrayRunning bool) [][]tel
 	return [][]telego.InlineKeyboardButton{
 		{tu.InlineKeyboardButton(buttonText).WithCallbackData(buttonData)},
 		{tu.InlineKeyboardButton(allVPNs).WithCallbackData("benchmark_all_vpns")},
+		{tu.InlineKeyboardButton(currentVPN).WithCallbackData("benchmark_current_vpn")},
 		{tu.InlineKeyboardButton(addVPN).WithCallbackData("benchmark_add_vpn")},
 		{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
 		{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
@@ -534,9 +589,11 @@ func getCurrentVPN(client *grpcClient.GRpcClient) string {
 }
 
 func listAllVPNs(client *grpcClient.GRpcClient) string {
-	return client.ListVPNStatuses()
+	str, _ := client.ListVPNStatuses()
+	return str
 }
 
 func addNewVPN(client *grpcClient.GRpcClient) string {
-	return client.ListVPNStatuses()
+	str, _ := client.ListVPNStatuses()
+	return str
 }

@@ -51,10 +51,12 @@ func (c *GRpcClient) Close() error {
 }
 
 // ListVPNStatuses возвращает статус всех Outbound-соединений
-func (c *GRpcClient) ListVPNStatuses() string {
+func (c *GRpcClient) ListVPNStatuses() (string, []string) {
+
+	tags := []string{}
 	if c.conn == nil {
 		log.Printf("Xray: соединение не инициализировано")
-		return "⚠️ Соединение не инициализировано"
+		return "⚠️ Соединение не инициализировано", tags
 	}
 
 	client := pbObserv.NewObservatoryServiceClient(c.conn)
@@ -65,7 +67,7 @@ func (c *GRpcClient) ListVPNStatuses() string {
 	resp, err := client.GetOutboundStatus(ctx, &pbObserv.GetOutboundStatusRequest{})
 	if err != nil {
 		log.Printf("Xray: ошибка запроса: %v", err)
-		return "⚠️ Не удалось получить статус VPN"
+		return "⚠️ Не удалось получить статус VPN", tags
 	}
 
 	statuses := resp.GetStatus().GetStatus()
@@ -80,15 +82,17 @@ func (c *GRpcClient) ListVPNStatuses() string {
 	var sb strings.Builder
 	sb.WriteString("📡 Список VPN и их статус:\n\n")
 
-	for _, s := range statuses {
+	for i, s := range statuses {
 		icon := "✅"
 		if !s.Alive {
 			icon = "❌"
 		}
-		sb.WriteString(fmt.Sprintf("%s %s — %d мс\n", icon, s.OutboundTag, s.Delay))
+		sb.WriteString(fmt.Sprintf("%d. %s %s — %d мс\n", i, icon, s.OutboundTag, s.Delay))
+		tags = append(tags, s.OutboundTag)
 	}
 
-	return sb.String()
+	sb.WriteString(fmt.Sprintf("\nПринудительно установить VPN: отправьте боту в Telegram команду `set n`, где n - номер VPN."))
+	return sb.String(), tags
 }
 
 // GetCurrentVPN возвращает текущий активный VPN
@@ -127,4 +131,31 @@ func (c *GRpcClient) GetCurrentVPN() string {
 	}
 
 	return "⚠️ Нет доступных VPN"
+}
+
+func OverrideBalancerTarget(c *GRpcClient, balancerTag, target string) string {
+	if c.conn == nil {
+		log.Printf("Xray: соединение не инициализировано")
+		return "⚠️ Соединение не инициализировано"
+	}
+
+	client := pbRoute.NewRoutingServiceClient(c.conn)
+
+	// Ограничение по времени
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Запрос
+	req := &pbRoute.OverrideBalancerTargetRequest{
+		BalancerTag: balancerTag,
+		Target:      target,
+	}
+
+	resp, err := client.OverrideBalancerTarget(ctx, req)
+	if err != nil {
+		log.Printf("Ошибка при вызове OverrideBalancerTarget: %v", err)
+		return "⚠️ Ошибка при вызове OverrideBalancerTarget"
+	}
+
+	return fmt.Sprintf("✅ Балансер %q переопределён на %q\nОтвет: %+v", balancerTag, target, resp)
 }
