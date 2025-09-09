@@ -101,7 +101,7 @@ jobs:
         run: echo "Deploying at $BUILD_TIME"
 
       - name: Upload artifacts
-        if: matrix.target.arch != 'amd64
+        if: matrix.target.arch != 'amd64'
         uses: actions/upload-artifact@v4
         with:
           name: surfboard-${{ matrix.target.arch }}
