@@ -143,6 +143,7 @@ jobs:
           docker push for6to9si/surfboard:${{ env.TAG_VERSION }}
 
       - name: Upload build artifact
+        if: matrix.target.arch == 'amd64'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target.output }}
