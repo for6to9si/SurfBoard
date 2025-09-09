@@ -93,7 +93,7 @@ jobs:
           fakeroot tar -czf surfboard-${{ github.ref_name }}_${{ matrix.target.arch }}.ipk ./debian-binary ./control.tar.gz ./data.tar.gz
 
       - name: Store build timestamp
-        if: matrix.target.arch != 'amd64
+        if: matrix.target.arch != 'amd64'
         run: echo "BUILD_TIME=$(date +'%T')" >> $GITHUB_ENV
 
       - name: Deploy using stored timestamp
