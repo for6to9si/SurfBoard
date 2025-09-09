@@ -97,7 +97,7 @@ jobs:
         run: echo "BUILD_TIME=$(date +'%T')" >> $GITHUB_ENV
 
       - name: Deploy using stored timestamp
-        if: matrix.target.arch != 'amd64
+        if: matrix.target.arch != 'amd64'
         run: echo "Deploying at $BUILD_TIME"
 
       - name: Upload artifacts
