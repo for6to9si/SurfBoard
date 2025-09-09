@@ -34,9 +34,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Необходимо для корректной работы git describe
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.24'
 
@@ -47,7 +49,8 @@ jobs:
           GOMIPS: softfloat
         run: |
           mkdir -p build
-          go build -v -o build/${{ matrix.target.output }} .
+          VERSION=$(git describe --tags --always --dirty)
+          go build -ldflags "-X main.Version=${VERSION}" -v -o build/${{ matrix.target.output }} .
 
       - name: Verify build output
         run: |

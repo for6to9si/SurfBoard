@@ -1,3 +1,11 @@
+// main.go - Starting/Stopping/Setting/Testing VPN Xray and sing-box
+//
+// Copyright (C) 2025 for6to9si@gmail.com. All rights reserved.
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// This program is free software: you can redistribute it and/or modify it under
+// the terms of the GNU General Public License as published by the Free Software
+// Foundation, either version 3 of the License, or (at your option) any later version.
 package main
 
 import (
@@ -29,23 +37,38 @@ func getLang() string {
 	return "en"
 }
 
+// Version specifies the current version of the application.
+var Version = "0.0.2"
+
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
 
 	locale.Loc = locale.Getlocalizer(getLang()) // Установка локализатора
 
-	//export SF_LOCATION_CONFDIR=/opt/etc/xray/configs
-	envConfigPath := os.Getenv("SF_LOCATION_CONFDIR")
-
-	// Локализация описания флага
+	// Локализация описания флага --config
 	configFlagDesc, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
 		MessageID: "config_flag_description",
+	})
+
+	// Локализация описания флага --version
+	versionFlagDesc, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
+		MessageID: "version_flag_description",
 	})
 
 	// Регистрируем флаг с локализованным описанием
 	flagConfigPath := flag.String("c", "", configFlagDesc)
 	flag.StringVar(flagConfigPath, "config", "", configFlagDesc)
+	versionFlag := flag.Bool("version", false, versionFlagDesc)
 	flag.Parse()
+
+	// Обработка флага --version
+	if *versionFlag {
+		fmt.Printf("Version: %s\n", Version)
+		os.Exit(0)
+	}
+
+	//export SF_LOCATION_CONFDIR=/opt/etc/surfboard/configs
+	envConfigPath := os.Getenv("SF_LOCATION_CONFDIR")
 
 	// Определяем финальный путь к конфигу
 	finalConfigPath := ""
