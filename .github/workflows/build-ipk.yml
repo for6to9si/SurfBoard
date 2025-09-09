@@ -69,6 +69,9 @@ jobs:
           mkdir -p surfboard-${{ matrix.target.arch }}/opt/var/log/surfboard
           mkdir -p surfboard-${{ matrix.target.arch }}/CONTROL
           
+          cp build/${{ matrix.target.output }} surfboard-${{ matrix.target.arch }}/opt/sbin/${{ matrix.target.output }}
+          chmod +x surfboard-${{ matrix.target.arch }}/opt/sbin/${{ matrix.target.output }}
+          
           cat > surfboard-${{ matrix.target.arch }}/CONTROL/control <<EOF
           Package: surfboard
           Depends: libc,libssp,librt,libpthread
