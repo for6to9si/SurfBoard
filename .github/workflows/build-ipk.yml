@@ -65,19 +65,49 @@ jobs:
           mkdir -p surfboard-${{ matrix.target.arch }}/opt/sbin
           mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/init.d
           mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/surfboard
+          mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/surfboard/template
           mkdir -p surfboard-${{ matrix.target.arch }}/opt/var/log/surfboard
           mkdir -p surfboard-${{ matrix.target.arch }}/CONTROL
           
           cat > surfboard-${{ matrix.target.arch }}/CONTROL/control <<EOF
-          Package: xray
-          Depends: libc,libssp,librt,libpthread,jq,iptables,cron,curl,coreutils-numfmt,column
+          Package: surfboard
+          Depends: libc,libssp,librt,libpthread
           Version: ${{ github.ref_name }}
           Architecture: ${{ matrix.target.arch == 'mipsle' && 'mipsel-3.4' || matrix.target.arch }}
           Section: net
-          Description: A minimalistic tool to automate Xray setup on Keenetic router systems.
+          Description: A minimalistic tool to automate Surfboard setup on Keenetic router systems.
           License: GPL-3.0 license
           Maintainer: for6to9si <for6to9si@gmail.com>
           EOF
+
+      - name: Package IPK
+        if: matrix.target.arch != 'amd64'
+        run: |
+          cd surfboard-${{ matrix.target.arch }}
+          fakeroot tar -czf ../data.tar.gz ./opt/sbin ./opt/etc ./opt/var/log/surfboard
+          cd ./CONTROL
+          fakeroot tar -czf ../../control.tar.gz *
+          cd ..
+          echo "2.0" > ../debian-binary
+          cd ..
+          fakeroot tar -czf surfboard-${{ github.ref_name }}_${{ matrix.target.arch }}.ipk ./debian-binary ./control.tar.gz ./data.tar.gz
+
+      - name: Store build timestamp
+        if: matrix.target.arch != 'amd64
+        run: echo "BUILD_TIME=$(date +'%T')" >> $GITHUB_ENV
+
+      - name: Deploy using stored timestamp
+        if: matrix.target.arch != 'amd64
+        run: echo "Deploying at $BUILD_TIME"
+
+      - name: Upload artifacts
+        if: matrix.target.arch != 'amd64
+        uses: actions/upload-artifact@v4
+        with:
+          name: surfboard-${{ matrix.target.arch }}
+          path: ./*.ipk
+          if-no-files-found: error
+
 
       - name: Set up Docker
         if: matrix.target.arch == 'amd64'
