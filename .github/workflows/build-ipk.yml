@@ -43,6 +43,7 @@ jobs:
           go-version: '1.24'
 
       - name: Build for ${{ matrix.target.arch }}
+        id: version
         env:
           GOOS: ${{ matrix.target.os }}
           GOARCH: ${{ matrix.target.arch }}
@@ -80,7 +81,7 @@ jobs:
           cat > surfboard-${{ matrix.target.arch }}/CONTROL/control <<EOF
           Package: surfboard
           Depends: libc,libssp,librt,libpthread
-          Version: ${{ github.ref_name }}
+          Version: ${{ steps.version.outputs.version }}
           Architecture: ${{ matrix.target.arch == 'mipsle' && 'mipsel-3.4' || matrix.target.arch }}
           Section: net
           Description: A minimalistic tool to automate Surfboard setup on Keenetic router systems.
@@ -98,7 +99,7 @@ jobs:
           cd ..
           echo "2.0" > ../debian-binary
           cd ..
-          fakeroot tar -czf surfboard-${{ matrix.target.outputs.version }}_${{ matrix.target.arch }}.ipk ./debian-binary ./control.tar.gz ./data.tar.gz
+          fakeroot tar -czf surfboard-${{ steps.version.outputs.version }}_${{ matrix.target.arch }}.ipk ./debian-binary ./control.tar.gz ./data.tar.gz
 
       - name: Debug IPK files
         if: matrix.target.arch != 'amd64'
