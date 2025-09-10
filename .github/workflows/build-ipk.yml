@@ -49,8 +49,10 @@ jobs:
           GOMIPS: softfloat
         run: |
           mkdir -p build
-          VERSION=$(git describe --tags --always --dirty)
+          VERSION=$(grep '^var Version =' main.go | sed -E 's/.*Version = "([^"]+)".*/\1/')
           go build -ldflags "-X main.Version=${VERSION}" -v -o build/${{ matrix.target.output }} .
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Using version: ${VERSION}"
 
       - name: Verify build output
         run: |
@@ -96,7 +98,7 @@ jobs:
           cd ..
           echo "2.0" > ../debian-binary
           cd ..
-          fakeroot tar -czf surfboard-${{ github.ref_name }}_${{ matrix.target.arch }}.ipk ./debian-binary ./control.tar.gz ./data.tar.gz
+          fakeroot tar -czf surfboard-${{ matrix.target.outputs.version }}_${{ matrix.target.arch }}.ipk ./debian-binary ./control.tar.gz ./data.tar.gz
 
       - name: Debug IPK files
         if: matrix.target.arch != 'amd64'
