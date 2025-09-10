@@ -158,6 +158,8 @@ jobs:
   deploy-repository:
     runs-on: ubuntu-latest
     needs: [build-ipk]
+    permissions:
+      contents: write  # Разрешает создание и push тегов/коммитов
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
