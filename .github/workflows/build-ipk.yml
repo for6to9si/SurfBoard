@@ -173,16 +173,22 @@ jobs:
       - name: Read version from SurfBoard file
         id: generate_tag
         run: |
-          VERSION_LINE=$(git describe --tags --always --dirty)
-          TAG_NAME="v$(echo "$VERSION_LINE" | sed -E 's/^# @version:[[:space:]]*//')"
+          VERSION=$(grep '^var Version =' main.go | sed -E 's/.*Version = "([^"]+)".*/\1/')
+          TAG_NAME="v$VERSION"
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION, Tag: $TAG_NAME"
 
       - name: Create Git tag and push
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag ${{ steps.generate_tag.outputs.tag_name }}
-          git push origin ${{ steps.generate_tag.outputs.tag_name }}
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@github.com"
+          TAG_NAME="${{ steps.generate_tag.outputs.tag_name }}"
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists, skipping."
+          else
+            git tag "$TAG_NAME"
+            git push origin "$TAG_NAME"
+          fi
 
       - name: Clean workspace
         run: |
