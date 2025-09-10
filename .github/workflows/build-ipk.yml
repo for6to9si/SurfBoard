@@ -178,6 +178,7 @@ jobs:
         run: |
           VERSION=$(grep '^var Version =' main.go | sed -E 's/.*Version = "([^"]+)".*/\1/')
           TAG_NAME="v$VERSION"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION, Tag: $TAG_NAME"
 
@@ -208,8 +209,8 @@ jobs:
 
       - name: Debug github.ref_name and file pattern
         run: |
-          echo "github.ref_name: ${{ github.ref_name }}"
-          find artifacts/ -name "surfboard_*.ipk"
+          echo "steps.generate_tag.outputs.tag_name: ${{ steps.generate_tag.outputs.tag_name}}"
+          find artifacts/ -name "surfboard-*.ipk"
 
       - name: Create release and upload artifacts (signed)
         env:
