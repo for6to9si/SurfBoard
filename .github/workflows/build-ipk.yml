@@ -98,6 +98,11 @@ jobs:
           cd ..
           fakeroot tar -czf surfboard-${{ github.ref_name }}_${{ matrix.target.arch }}.ipk ./debian-binary ./control.tar.gz ./data.tar.gz
 
+      - name: Debug IPK files
+        if: matrix.target.arch != 'amd64'
+        run: |
+          ls -la *.ipk || echo "No .ipk files found"
+
       - name: Store build timestamp
         if: matrix.target.arch != 'amd64'
         run: echo "BUILD_TIME=$(date +'%T')" >> $GITHUB_ENV
@@ -113,7 +118,6 @@ jobs:
           name: surfboard-${{ matrix.target.arch }}
           path: ./*.ipk
           if-no-files-found: error
-
 
       - name: Set up Docker
         if: matrix.target.arch == 'amd64'
@@ -166,7 +170,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read version from S98xray file
+      - name: Read version from SurfBoard file
         id: generate_tag
         run: |
           VERSION_LINE=$(git describe --tags --always --dirty)
@@ -180,16 +184,30 @@ jobs:
           git tag ${{ steps.generate_tag.outputs.tag_name }}
           git push origin ${{ steps.generate_tag.outputs.tag_name }}
 
+      - name: Clean workspace
+        run: |
+          rm -rf artifacts/*
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Debug artifact directory
+        run: |
+          ls -R artifacts/
+
+      - name: Debug github.ref_name and file pattern
+        run: |
+          echo "github.ref_name: ${{ github.ref_name }}"
+          find artifacts/ -name "surfboard_*.ipk"
 
       - name: Create release and upload artifacts (signed)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG=${{ steps.generate_tag.outputs.tag_name }}
+          PRERELEASE=${{ github.event.inputs.prerelease || 'false' }}
 
           # Найдём предыдущий тег по дате создания
           PREV_TAG=$(git tag --sort=-creatordate | grep -v "^${TAG}$" | head -n 1 || echo "")
@@ -205,15 +223,15 @@ jobs:
           echo "Changelog:"
           cat changelog.txt
 
-            if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
-              gh release create "$TAG" artifacts/surfboard-*/surfboard_*.ipk \
+          if [ "$PRERELEASE" = "true" ]; then
+            gh release create "$TAG" artifacts/surfboard-*/surfboard_*.ipk \
               --repo "$GITHUB_REPOSITORY" \
               --title "Release $TAG" \
               --notes-file changelog.txt \
               --prerelease
-            else
-              gh release create "$TAG" artifacts/surfboard-*/surfboard_*.ipk \
+          else
+            gh release create "$TAG" artifacts/surfboard-*/surfboard_*.ipk \
               --repo "$GITHUB_REPOSITORY" \
               --title "Release $TAG" \
               --notes-file changelog.txt 
-            fi
+          fi
