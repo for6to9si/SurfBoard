@@ -17,7 +17,7 @@ on:
           - 'false'
 
 jobs:
-  build:
+  build-ipk:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -154,3 +154,64 @@ jobs:
         with:
           name: ${{ matrix.target.output }}
           path: build/${{ matrix.target.output }}
+
+  deploy-repository:
+    runs-on: ubuntu-latest
+    needs: [build-ipk]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from S98xray file
+        id: generate_tag
+        run: |
+          VERSION_LINE=$(git describe --tags --always --dirty)
+          TAG_NAME="v$(echo "$VERSION_LINE" | sed -E 's/^# @version:[[:space:]]*//')"
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create Git tag and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag ${{ steps.generate_tag.outputs.tag_name }}
+          git push origin ${{ steps.generate_tag.outputs.tag_name }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release and upload artifacts (signed)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=${{ steps.generate_tag.outputs.tag_name }}
+
+          # Найдём предыдущий тег по дате создания
+          PREV_TAG=$(git tag --sort=-creatordate | grep -v "^${TAG}$" | head -n 1 || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found. Logging all history."
+            git log --pretty=format:'- [%h](https://github.com/${{ github.repository }}/commit/%H): %s' > changelog.txt
+          else
+            echo "Generating changelog from $PREV_TAG to HEAD"
+            git log "$PREV_TAG"..HEAD --pretty=format:'- [%h](https://github.com/${{ github.repository }}/commit/%H): %s' > changelog.txt
+          fi
+
+          echo "Changelog:"
+          cat changelog.txt
+
+            if [ "${{ github.event.inputs.prerelease }}" = "true" ]; then
+              gh release create "$TAG" artifacts/surfboard-*/surfboard_*.ipk \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Release $TAG" \
+              --notes-file changelog.txt \
+              --prerelease
+            else
+              gh release create "$TAG" artifacts/surfboard-*/surfboard_*.ipk \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Release $TAG" \
+              --notes-file changelog.txt 
+            fi
