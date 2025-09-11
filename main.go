@@ -38,7 +38,7 @@ func getLang() string {
 }
 
 // Version specifies the current version of the application.
-var Version = "0.0.2"
+var Version = "0.0.3"
 
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
@@ -67,7 +67,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	//export SF_LOCATION_CONFDIR=/opt/etc/surfboard/configs
+	//export SF_LOCATION_CONFDIR=/opt/etc/surfboard/conf.json
 	envConfigPath := os.Getenv("SF_LOCATION_CONFDIR")
 
 	// Определяем финальный путь к конфигу
