@@ -78,7 +78,7 @@ jobs:
           cp build/${{ matrix.target.output }} surfboard-${{ matrix.target.arch }}/opt/sbin/${{ matrix.target.output }}
           chmod +x surfboard-${{ matrix.target.arch }}/opt/sbin/${{ matrix.target.output }}
                     
-          cp ./etc/init.d/S99surfboard surfboard-${{ matrix.target.arch }}/opt/etc/etc/init.d/
+          cp ./etc/init.d/S99surfboard surfboard-${{ matrix.target.arch }}/opt/etc/init.d/
           chmod +x surfboard-${{ matrix.target.arch }}/opt/etc/etc/init.d/S99surfboard
           cp ./etc/surfboard/settings.json surfboard-${{ matrix.target.arch }}/opt/etc/surfboard/settings.json
           
