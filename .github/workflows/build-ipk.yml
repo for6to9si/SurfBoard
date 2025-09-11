@@ -75,8 +75,8 @@ jobs:
           mkdir -p surfboard-${{ matrix.target.arch }}/opt/var/log/surfboard
           mkdir -p surfboard-${{ matrix.target.arch }}/CONTROL
           
-          cp build/${{ matrix.target.output }} surfboard-${{ matrix.target.arch }}/opt/sbin/${{ matrix.target.output }}
-          chmod +x surfboard-${{ matrix.target.arch }}/opt/sbin/${{ matrix.target.output }}
+          cp build/${{ matrix.target.output }} surfboard-${{ matrix.target.arch }}/opt/sbin/surfboard
+          chmod +x surfboard-${{ matrix.target.arch }}/opt/sbin/surfboard
                     
           cp ./etc/init.d/S99surfboard surfboard-${{ matrix.target.arch }}/opt/etc/init.d/
           chmod +x surfboard-${{ matrix.target.arch }}/opt/etc/init.d/S99surfboard
