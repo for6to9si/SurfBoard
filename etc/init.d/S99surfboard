@@ -29,7 +29,7 @@ ENABLED=yes
 DEBUG=true
 export PATH=/opt/bin:/opt/sbin:/usr/bin:/bin:/sbin:/usr/sbin
 PROCS=surfboard
-CONF=/opt/etc/surfboard/conf.json
+CONF=/opt/etc/surfboard/config.json
 
 [ "$DEBUG" = "true" ] && LOG_FILE=/opt/var/log/surfboard/surfboard.log || LOG_FILE=/dev/null
 

@@ -111,6 +111,7 @@ func ModifyBalancerJson(template string, filename string, tags []string) []strin
 	data, err := os.ReadFile(template)
 	if err != nil {
 		results = append(results, fmt.Sprintf("не удалось открыть %s", template))
+		return results
 	}
 
 	var cfg Config

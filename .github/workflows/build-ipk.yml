@@ -71,7 +71,10 @@ jobs:
           mkdir -p surfboard-${{ matrix.target.arch }}/opt/sbin
           mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/init.d
           mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/surfboard
-          mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/surfboard/template
+          mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/surfboard/benchmark/xray
+          mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/surfboard/benchmark/xray/dat
+          mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/surfboard/benchmark/xray/configs
+          mkdir -p surfboard-${{ matrix.target.arch }}/opt/etc/surfboard/benchmark/xray/templates
           mkdir -p surfboard-${{ matrix.target.arch }}/opt/var/log/surfboard
           mkdir -p surfboard-${{ matrix.target.arch }}/CONTROL
           

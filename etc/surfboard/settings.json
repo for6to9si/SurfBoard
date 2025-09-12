@@ -56,9 +56,9 @@
         },
         "env":
         {
-            "XRAY_LOCATION_ASSET": "/opt/etc/xray/dat",
-            "XRAY_LOCATION_CONFDIR": "/opt/etc/xray/configs",
-            "XRAY_LOCATION_TEMPLATEDIR": "/opt/etc/xray/template",
+            "XRAY_LOCATION_ASSET": "/opt/etc/surfboard/benchmark/xray/dat",
+            "XRAY_LOCATION_CONFDIR": "/opt/etc/surfboard/benchmark/xray/configs",
+            "XRAY_LOCATION_TEMPLATEDIR": "/opt/etc/surfboard/benchmark/xray/templates",
             "XRAY_RAY_BUFFER_SIZE": 4
         },
         "grpc":
@@ -85,8 +85,8 @@
         "TOKEN": "aaaaaa:AAdp9_PB-d7pm_5ido",
         "adminIds":
         [
-            "1111111",
-            "2222222"
+            1111111,
+            2222222
         ]
     }
 }
