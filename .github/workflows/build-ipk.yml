@@ -51,17 +51,7 @@ jobs:
         run: |
           mkdir -p build
           VERSION=$(grep '^var Version =' main.go | sed -E 's/.*Version = "([^"]+)".*/\1/')
-
-          # Значение по умолчанию (если workflow запущен push/PR, то input пустой → считаем debug)
-          PRERELEASE="${{ github.event.inputs.prerelease || 'true' }}"
-
-          if [ "$PRERELEASE" = "false" ]; then
-            echo "🚀 Release build (без отладочной информации)"
-            go build -ldflags "-X main.Version=${VERSION}" -v -o build/${{ matrix.target.output }} .
-          else
-            echo "🐛 Debug build (с -gcflags)"
-            go build -gcflags "all=-N -l" -ldflags "-X main.Version=${VERSION}" -v -o build/${{ matrix.target.output }} .
-          fi
+          go build -ldflags "-X main.Version=${VERSION}" -v -o build/${{ matrix.target.output }} .
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Using version: ${VERSION}"

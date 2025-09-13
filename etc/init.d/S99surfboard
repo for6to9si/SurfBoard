@@ -41,17 +41,7 @@ case "$1" in
     start)
         echo "Starting $PROCS..."
         echo "=== $(date) === surfboard client info ===" >>"$LOG_FILE"
-
-        if [ "$DEBUG" = "true" ]; then
-            echo "Running $PROCS in debug mode with dlv..." >>"$LOG_FILE"
-            dlv --listen=:2345 \
-                --headless=true \
-                --api-version=2 \
-                --accept-multiclient \
-                exec "$PROCS" -- -c "$CONF" >>"$LOG_FILE" 2>&1 &
-        else
-            "$PROCS" -c "$CONF" >>"$LOG_FILE" 2>&1 &
-        fi
+        $PROCS -c "$CONF" >>"$LOG_FILE" 2>&1 &
         ;;
     stop)
         echo "Stopping $PROCS..."
