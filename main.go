@@ -38,7 +38,7 @@ func getLang() string {
 }
 
 // Version specifies the current version of the application.
-var Version = "0.0.7"
+var Version = "0.0.8"
 
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
@@ -576,40 +576,47 @@ func handleVPNState(
 	confDir string,
 ) {
 	lines := strings.Split(message.Text, "\n")
-
-	// Проверяем, не команда ли это set X
 	trimmedText := strings.TrimSpace(message.Text)
+
+	// Проверка на "set n" или просто "n"
+	var indexStr string
 	if strings.HasPrefix(trimmedText, "set ") {
 		parts := strings.SplitN(trimmedText, " ", 2)
 		if len(parts) == 2 {
-			indexStr := strings.TrimSpace(parts[1])
-			x, err := strconv.Atoi(indexStr)
-			if err != nil {
-				_, _ = bot.SendMessage(ctx, tu.Message(
-					message.Chat.ChatID(),
-					fmt.Sprintf("Ошибка: `%s` не является числом", indexStr),
-				))
-				return
-			}
+			indexStr = strings.TrimSpace(parts[1])
+		}
+	} else if _, err := strconv.Atoi(trimmedText); err == nil {
+		// Если введено просто число
+		indexStr = trimmedText
+	}
 
-			// Получаем все теги
-			_, allTags := client.ListVPNStatuses()
-			if x < 0 || x >= len(allTags) {
-				_, _ = bot.SendMessage(ctx, tu.Message(
-					message.Chat.ChatID(),
-					fmt.Sprintf("Ошибка: индекс %d вне диапазона (0..%d)", x, len(allTags)-1),
-				))
-				return
-			}
-
-			// Запускаем OverrideBalancerTarget
-			grpcClient.OverrideBalancerTarget(client, "bestVPN", allTags[x])
+	if indexStr != "" {
+		x, err := strconv.Atoi(indexStr)
+		if err != nil {
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				message.Chat.ChatID(),
-				fmt.Sprintf("Balancer переопределён на: %s", allTags[x]),
+				fmt.Sprintf("Ошибка: `%s` не является числом", indexStr),
 			))
 			return
 		}
+
+		// Получаем все теги
+		_, allTags := client.ListVPNStatuses()
+		if x < 0 || x >= len(allTags) {
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				message.Chat.ChatID(),
+				fmt.Sprintf("Ошибка: индекс %d вне диапазона (0..%d)", x, len(allTags)-1),
+			))
+			return
+		}
+
+		// Запускаем OverrideBalancerTarget
+		grpcClient.OverrideBalancerTarget(client, "bestVPN", allTags[x])
+		_, _ = bot.SendMessage(ctx, tu.Message(
+			message.Chat.ChatID(),
+			fmt.Sprintf("Balancer переопределён на: %s", allTags[x]),
+		))
+		return
 	}
 
 	// Если это не команда, то обрабатываем строки как раньше
