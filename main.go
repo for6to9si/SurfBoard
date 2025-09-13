@@ -38,7 +38,7 @@ func getLang() string {
 }
 
 // Version specifies the current version of the application.
-var Version = "0.0.5"
+var Version = "0.0.6"
 
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
@@ -341,6 +341,63 @@ func main() {
 			}
 		case StateXray:
 			text = "StateXray!"
+			lines := strings.Split(message.Text, "\n")
+
+			// Проверяем, не команда ли это set X
+			trimmedText := strings.TrimSpace(message.Text)
+			if strings.HasPrefix(trimmedText, "set ") {
+				parts := strings.SplitN(trimmedText, " ", 2)
+				if len(parts) == 2 {
+					indexStr := strings.TrimSpace(parts[1])
+					x, err := strconv.Atoi(indexStr)
+					if err != nil {
+						_, _ = bot.SendMessage(ctx, tu.Message(
+							message.Chat.ChatID(),
+							fmt.Sprintf("Ошибка: `%s` не является числом", indexStr),
+						))
+						break
+					}
+
+					// Получаем все теги
+					_, allTags := xraygRpcclient.ListVPNStatuses()
+
+					if x < 0 || x >= len(allTags) {
+						_, _ = bot.SendMessage(ctx, tu.Message(
+							message.Chat.ChatID(),
+							fmt.Sprintf("Ошибка: индекс %d вне диапазона (0..%d)", x, len(allTags)-1),
+						))
+						break
+					}
+
+					// Запускаем OverrideBalancerTarget
+					grpcClient.OverrideBalancerTarget(xraygRpcclient, "bestVPN", allTags[x])
+
+					_, _ = bot.SendMessage(ctx, tu.Message(
+						message.Chat.ChatID(),
+						fmt.Sprintf("Balancer переопределён на: %s", allTags[x]),
+					))
+					break
+				}
+			}
+
+			// Если это не команда, то обрабатываем строки как раньше
+			for _, line := range lines {
+				trimmed := strings.TrimSpace(line)
+				if trimmed != "" {
+					filteredLines = append(filteredLines, trimmed)
+				}
+			}
+
+			tags = benchmarkMode.Parses(filteredLines, config.XwayConf.Env.XrayLocationConfdir)
+
+			for _, line := range tags {
+				// Пропускаем пустые строки, если они есть
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+
+				_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
+			}
 		case StateSingBox:
 			text = "StateSingBox!"
 		default:
