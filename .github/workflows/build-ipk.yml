@@ -51,7 +51,15 @@ jobs:
         run: |
           mkdir -p build
           VERSION=$(grep '^var Version =' main.go | sed -E 's/.*Version = "([^"]+)".*/\1/')
-          go build -ldflags "-X main.Version=${VERSION}" -v -o build/${{ matrix.target.output }} .
+          
+          if [ "${{ github.event.release.prerelease }}" = "true" ]; then 
+            echo "⚙️ Pre-release build: добавляем -gcflags"
+            go build -gcflags "all=-N -l" -ldflags "-X main.Version=${VERSION}" -v -o build/${{ matrix.target.output }} .
+          else
+            echo "✅ Normal build"
+            go build -ldflags "-X main.Version=${VERSION}" -v -o build/${{ matrix.target.output }} .
+          fi
+
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Using version: ${VERSION}"
 
