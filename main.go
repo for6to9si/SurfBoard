@@ -38,7 +38,7 @@ func getLang() string {
 }
 
 // Version specifies the current version of the application.
-var Version = "0.0.6"
+var Version = "0.0.7"
 
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
@@ -272,132 +272,21 @@ func main() {
 
 		var text string
 		// Фильтруем пустые строки
-		var filteredLines []string
+		//var filteredLines []string
 
-		var tags []string
+		//var tags []string
 
 		switch user.State {
 		case StateDefault:
 			text = "не выбрано"
 		case StateBenchmark:
 			text = "Thanks for your data!"
-			lines := strings.Split(message.Text, "\n")
+			handleVPNState(ctx, message, bot, benchmarkclient, config.BenchmarkSettings.Env.XrayLocationConfdir)
 
-			// Проверяем, не команда ли это set X
-			trimmedText := strings.TrimSpace(message.Text)
-			if strings.HasPrefix(trimmedText, "set ") {
-				parts := strings.SplitN(trimmedText, " ", 2)
-				if len(parts) == 2 {
-					indexStr := strings.TrimSpace(parts[1])
-					x, err := strconv.Atoi(indexStr)
-					if err != nil {
-						_, _ = bot.SendMessage(ctx, tu.Message(
-							message.Chat.ChatID(),
-							fmt.Sprintf("Ошибка: `%s` не является числом", indexStr),
-						))
-						break
-					}
-
-					// Получаем все теги
-					_, allTags := benchmarkclient.ListVPNStatuses()
-					//allTags := benchmarkMode.GetTags(config.BenchmarkSettings.Env.XrayLocationConfdir)
-
-					if x < 0 || x >= len(allTags) {
-						_, _ = bot.SendMessage(ctx, tu.Message(
-							message.Chat.ChatID(),
-							fmt.Sprintf("Ошибка: индекс %d вне диапазона (0..%d)", x, len(allTags)-1),
-						))
-						break
-					}
-
-					// Запускаем OverrideBalancerTarget
-					grpcClient.OverrideBalancerTarget(benchmarkclient, "bestVPN", allTags[x])
-
-					_, _ = bot.SendMessage(ctx, tu.Message(
-						message.Chat.ChatID(),
-						fmt.Sprintf("Balancer переопределён на: %s", allTags[x]),
-					))
-					break
-				}
-			}
-
-			// Если это не команда, то обрабатываем строки как раньше
-			for _, line := range lines {
-				trimmed := strings.TrimSpace(line)
-				if trimmed != "" {
-					filteredLines = append(filteredLines, trimmed)
-				}
-			}
-
-			tags = benchmarkMode.Parses(filteredLines, config.BenchmarkSettings.Env.XrayLocationConfdir)
-
-			for _, line := range tags {
-				// Пропускаем пустые строки, если они есть
-				if strings.TrimSpace(line) == "" {
-					continue
-				}
-
-				_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
-			}
 		case StateXray:
 			text = "StateXray!"
-			lines := strings.Split(message.Text, "\n")
+			handleVPNState(ctx, message, bot, xraygRpcclient, config.XwayConf.Env.XrayLocationConfdir)
 
-			// Проверяем, не команда ли это set X
-			trimmedText := strings.TrimSpace(message.Text)
-			if strings.HasPrefix(trimmedText, "set ") {
-				parts := strings.SplitN(trimmedText, " ", 2)
-				if len(parts) == 2 {
-					indexStr := strings.TrimSpace(parts[1])
-					x, err := strconv.Atoi(indexStr)
-					if err != nil {
-						_, _ = bot.SendMessage(ctx, tu.Message(
-							message.Chat.ChatID(),
-							fmt.Sprintf("Ошибка: `%s` не является числом", indexStr),
-						))
-						break
-					}
-
-					// Получаем все теги
-					_, allTags := xraygRpcclient.ListVPNStatuses()
-
-					if x < 0 || x >= len(allTags) {
-						_, _ = bot.SendMessage(ctx, tu.Message(
-							message.Chat.ChatID(),
-							fmt.Sprintf("Ошибка: индекс %d вне диапазона (0..%d)", x, len(allTags)-1),
-						))
-						break
-					}
-
-					// Запускаем OverrideBalancerTarget
-					grpcClient.OverrideBalancerTarget(xraygRpcclient, "bestVPN", allTags[x])
-
-					_, _ = bot.SendMessage(ctx, tu.Message(
-						message.Chat.ChatID(),
-						fmt.Sprintf("Balancer переопределён на: %s", allTags[x]),
-					))
-					break
-				}
-			}
-
-			// Если это не команда, то обрабатываем строки как раньше
-			for _, line := range lines {
-				trimmed := strings.TrimSpace(line)
-				if trimmed != "" {
-					filteredLines = append(filteredLines, trimmed)
-				}
-			}
-
-			tags = benchmarkMode.Parses(filteredLines, config.XwayConf.Env.XrayLocationConfdir)
-
-			for _, line := range tags {
-				// Пропускаем пустые строки, если они есть
-				if strings.TrimSpace(line) == "" {
-					continue
-				}
-
-				_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
-			}
 		case StateSingBox:
 			text = "StateSingBox!"
 		default:
@@ -676,4 +565,68 @@ func listAllVPNs(client *grpcClient.GRpcClient) string {
 func addNewVPN(client *grpcClient.GRpcClient) string {
 	str, _ := client.ListVPNStatuses()
 	return str
+}
+
+// 🔧 Универсальная функция обработки состояний Benchmark и Xray
+func handleVPNState(
+	ctx *th.Context,
+	message telego.Message,
+	bot *telego.Bot,
+	client *grpcClient.GRpcClient,
+	confDir string,
+) {
+	lines := strings.Split(message.Text, "\n")
+
+	// Проверяем, не команда ли это set X
+	trimmedText := strings.TrimSpace(message.Text)
+	if strings.HasPrefix(trimmedText, "set ") {
+		parts := strings.SplitN(trimmedText, " ", 2)
+		if len(parts) == 2 {
+			indexStr := strings.TrimSpace(parts[1])
+			x, err := strconv.Atoi(indexStr)
+			if err != nil {
+				_, _ = bot.SendMessage(ctx, tu.Message(
+					message.Chat.ChatID(),
+					fmt.Sprintf("Ошибка: `%s` не является числом", indexStr),
+				))
+				return
+			}
+
+			// Получаем все теги
+			_, allTags := client.ListVPNStatuses()
+			if x < 0 || x >= len(allTags) {
+				_, _ = bot.SendMessage(ctx, tu.Message(
+					message.Chat.ChatID(),
+					fmt.Sprintf("Ошибка: индекс %d вне диапазона (0..%d)", x, len(allTags)-1),
+				))
+				return
+			}
+
+			// Запускаем OverrideBalancerTarget
+			grpcClient.OverrideBalancerTarget(client, "bestVPN", allTags[x])
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				message.Chat.ChatID(),
+				fmt.Sprintf("Balancer переопределён на: %s", allTags[x]),
+			))
+			return
+		}
+	}
+
+	// Если это не команда, то обрабатываем строки как раньше
+	var filteredLines []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			filteredLines = append(filteredLines, trimmed)
+		}
+	}
+
+	tags := benchmarkMode.Parses(filteredLines, confDir)
+
+	for _, line := range tags {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
+	}
 }
