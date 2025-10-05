@@ -15,6 +15,7 @@ type Config struct {
 	SwayConf          SwayConf          `json:"swayConf"`
 	BenchmarkSettings BenchmarkSettings `json:"benchmarkSettings"`
 	TgBot             TgBot             `json:"tgBot"`
+	Installer         Installer         `json:"installer"`
 }
 type Paths struct {
 	XrayExecutable    string `json:"xrayExecutable"`
@@ -84,6 +85,17 @@ type BenchmarkSettings struct {
 type TgBot struct {
 	Token    string  `json:"TOKEN"`
 	AdminIds []int64 `json:"adminIds"`
+}
+type Programm struct {
+	ExecutablePath string   `json:"executablePath"`
+	Args           []string `json:"args"`
+	UpdateURL      string   `json:"update_url"`
+	IsEnabled      bool     `json:"isEnabled"`
+}
+
+type Installer struct {
+	IsEnabled bool                `json:"isEnabled"`
+	Programs  map[string]Programm `json:"programs"`
 }
 
 // LoadConfig загружает конфигурацию из JSON-файла

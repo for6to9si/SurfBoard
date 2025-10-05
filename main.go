@@ -12,6 +12,7 @@ import (
 	"SurfBoard/benchmarkMode"
 	"SurfBoard/conf"
 	"SurfBoard/grpcClient"
+	"SurfBoard/installer"
 	"SurfBoard/locale"
 	"context"
 	"flag"
@@ -19,6 +20,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -233,6 +235,7 @@ func main() {
 		StateBenchmark
 		StateXray
 		StateSingBox
+		StateSetupApps
 	)
 
 	type User struct {
@@ -289,6 +292,10 @@ func main() {
 
 		case StateSingBox:
 			text = "StateSingBox!"
+
+		case StateSetupApps:
+			text = "StateSetupApps!"
+
 		default:
 			panic("unknown state")
 		}
@@ -333,17 +340,53 @@ func main() {
 		addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
 		done, _ := loc.LocalizeMessage(&i18n.Message{ID: "done"})
 		underDevelopment, _ := loc.LocalizeMessage(&i18n.Message{ID: "under_development"})
+		var tmp = ""
 
 		// Объявляем пустую клавиатуру
 		//var inlineKeyboard [][]telego.InlineKeyboardButton
+		tmp = tmp + "fd"
 
 		switch query.Data {
+
+		case "manage_apps":
+			// Отображаем скрытые кнопки
+
+			user.State = StateSetupApps
+
+			programs := installer.GetLocalVersion(config.Installer.Programs)
+
+			rows := make([][]telego.InlineKeyboardButton, 0, len(programs)+1)
+
+			var btn telego.InlineKeyboardButton
+
+			for _, program := range programs {
+
+				// создаём кнопку через helper (возвращает telego.InlineKeyboardButton)
+				if !program.Installed {
+					tmp := fmt.Sprintf("%s не установлена ❌\n", program.App)
+					btn = tu.InlineKeyboardButton(tmp).WithCallbackData("program_" + sanitizeCallback(program.App))
+				} else {
+					btn = tu.InlineKeyboardButton(program.App).WithCallbackData("program_" + sanitizeCallback(program.App))
+				}
+
+				// tu.InlineKeyboardRow(btn) возвращает []telego.InlineKeyboardButton — можно сразу append
+				rows = append(rows, tu.InlineKeyboardRow(btn))
+
+			}
+
+			// добавляем кнопку "Назад"
+			backBtn := tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")
+			rows = append(rows, tu.InlineKeyboardRow(backBtn))
+
+			// отправляем — tu.InlineKeyboard принимает variadic rows
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "📦 Applications:").WithReplyMarkup(tu.InlineKeyboard(rows...)))
+
 		case "xray_vpn":
 			// Отображаем скрытые кнопки
 			user.State = StateXray
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
-				"Second VPN options:",
+				"VPN options:",
 			).WithReplyMarkup(tu.InlineKeyboard(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("xray_current_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("xray_all_vpns")),
@@ -481,6 +524,14 @@ func main() {
 	_ = bh.Start()
 }
 
+// helper для безопасного callback data
+func sanitizeCallback(s string) string {
+	s = strings.ToLower(s)
+	s = strings.ReplaceAll(s, " ", "_")
+	re := regexp.MustCompile(`[^a-z0-9\-_]`)
+	return re.ReplaceAllString(s, "")
+}
+
 // Определяем функцию для создания клавиатуры для benchmark-режима
 func createBenchmarkKeyboard(loc *i18n.Localizer, isXrayRunning bool) [][]telego.InlineKeyboardButton {
 
@@ -532,6 +583,12 @@ func handleFastVPNTest(ctx *th.Context, query telego.CallbackQuery, bot *telego.
 
 func greetUser(config *conf.Config) [][]telego.InlineKeyboardButton {
 	var inlineKeyboard [][]telego.InlineKeyboardButton
+
+	if config.Installer.IsEnabled {
+		inlineKeyboard = append(inlineKeyboard, []telego.InlineKeyboardButton{
+			tu.InlineKeyboardButton("Install/Update").WithCallbackData("manage_apps"),
+		})
+	}
 
 	if config.XwayConf.IsEnabled {
 		inlineKeyboard = append(inlineKeyboard, []telego.InlineKeyboardButton{
