@@ -40,7 +40,7 @@ func getLang() string {
 }
 
 // Version specifies the current version of the application.
-var Version = "0.0.8"
+var Version = "0.0.9"
 
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
@@ -305,7 +305,8 @@ func main() {
 		lock.Unlock()
 
 		_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), text))
-		return nil
+		upd := telego.Update{Message: &message}
+		return ctx.Next(upd)
 	})
 
 	bh.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
@@ -341,6 +342,12 @@ func main() {
 		done, _ := loc.LocalizeMessage(&i18n.Message{ID: "done"})
 		underDevelopment, _ := loc.LocalizeMessage(&i18n.Message{ID: "under_development"})
 		var tmp = ""
+
+		// если это не тот callback — передаём дальше
+		if strings.HasPrefix(query.Data, "program_") && query.Data != "back_to_programs" {
+			upd := telego.Update{CallbackQuery: &query}
+			return ctx.Next(upd) // <- тут нужен telego.Update
+		}
 
 		// Объявляем пустую клавиатуру
 		//var inlineKeyboard [][]telego.InlineKeyboardButton
@@ -505,12 +512,15 @@ func main() {
 		case "benchmark_add_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(benchmarkclient)))
 		default:
-			unknownCommand, _ := loc.LocalizeMessage(&i18n.Message{ID: "unknown_command"})
-			inlineKeyboard := greetUser(config)
-			_, _ = bot.SendMessage(ctx, tu.Message(
-				tu.ID(query.Message.GetChat().ID),
-				unknownCommand,
-			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
+			//unknownCommand, _ := loc.LocalizeMessage(&i18n.Message{ID: "unknown_command"})
+			//inlineKeyboard := greetUser(config)
+			//_, _ = bot.SendMessage(ctx, tu.Message(
+			//	tu.ID(query.Message.GetChat().ID),
+			//	unknownCommand,
+			//).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
+			// Если callback не подошёл — передаём дальше
+			upd := telego.Update{CallbackQuery: &query}
+			return ctx.Next(upd)
 		}
 
 		lock.Lock()
@@ -521,6 +531,147 @@ func main() {
 		return nil
 	}, th.AnyCallbackQueryWithMessage())
 
+	// --- Callback "program_<имя>" ---
+	bh.Handle(func(ctx *th.Context, update telego.Update) error {
+		cq := update.CallbackQuery
+		if cq.Message == nil || cq.Message.Message == nil {
+			// Сообщение недоступно
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, &telego.AnswerCallbackQueryParams{
+				CallbackQueryID: cq.ID,
+				Text:            "❌ Сообщение недоступно",
+			})
+			return nil
+		}
+
+		appName := strings.TrimPrefix(cq.Data, "program_")
+		var selected *installer.VersionInfo
+		for _, p := range installer.GetLocalVersion(config.Installer.Programs) {
+			if strings.EqualFold(p.App, appName) {
+				selected = &p
+				break
+			}
+		}
+
+		if selected == nil {
+			return ctx.Bot().AnswerCallbackQuery(ctx, &telego.AnswerCallbackQueryParams{
+				CallbackQueryID: cq.ID,
+				Text:            "❌ Программа не найдена",
+			})
+		}
+
+		// Формируем статус
+		var status string
+		switch selected.CompareVersions {
+		case 0:
+			status = "✅ Установлена последняя версия"
+		case -1:
+			status = "🚀 Доступно обновление"
+		case 1:
+			status = "⚙️ Локальная версия новее (dev-сборка)"
+		default:
+			if !selected.Installed {
+				status = "❌ Не установлена"
+			} else {
+				status = "ℹ️ Статус неизвестен"
+			}
+		}
+
+		msg := fmt.Sprintf(
+			"*%s*\n"+
+				"📦 Локальная версия: `%s`\n"+
+				"🌐 Последняя версия: `%s`\n"+
+				"💾 Путь: `%s`\n"+
+				"📊 Состояние: %s",
+			selected.App,
+			safe(selected.Version),
+			safe(selected.Release),
+			safe(selected.Path),
+			status,
+		)
+
+		// Редактируем сообщение безопасно
+		_, err := ctx.Bot().EditMessageText(ctx, &telego.EditMessageTextParams{
+			ChatID:    tu.ID(cq.Message.GetChat().ID),
+			MessageID: cq.Message.GetMessageID(),
+			Text:      msg,
+			ParseMode: telego.ModeMarkdown,
+			ReplyMarkup: tu.InlineKeyboard(
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_programs"),
+				),
+			),
+		})
+		// Отвечаем на callback, чтобы убрать "часики"
+		_ = ctx.Bot().AnswerCallbackQuery(ctx, &telego.AnswerCallbackQueryParams{
+			CallbackQueryID: cq.ID,
+		})
+		return err
+	}, th.CallbackDataPrefix("program_"))
+
+	// --- Callback "back_to_programs" ---
+	bh.Handle(func(ctx *th.Context, update telego.Update) error {
+		cq := update.CallbackQuery
+		if cq.Message == nil || cq.Message.Message == nil {
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, &telego.AnswerCallbackQueryParams{
+				CallbackQueryID: cq.ID,
+				Text:            "❌ Сообщение недоступно",
+			})
+			return nil
+		}
+
+		keyboard := make([][]telego.InlineKeyboardButton, 0)
+		for _, prog := range installer.GetLocalVersion(config.Installer.Programs) {
+			keyboard = append(keyboard, tu.InlineKeyboardRow(
+				tu.InlineKeyboardButton(prog.App).WithCallbackData("program_"+prog.App),
+			))
+		}
+		keyboard = append(keyboard, tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("❌ Закрыть").WithCallbackData("close"),
+		))
+
+		_, err := ctx.Bot().EditMessageText(ctx, &telego.EditMessageTextParams{
+			ChatID:      tu.ID(cq.Message.GetChat().ID),
+			MessageID:   cq.Message.GetMessageID(),
+			Text:        "📋 Список приложений:",
+			ReplyMarkup: tu.InlineKeyboard(keyboard...),
+		})
+		return err
+	}, th.CallbackDataEqual("back_to_programs"))
+
+	// --- Обработка команды /start ---
+	bh.Handle(func(ctx *th.Context, update telego.Update) error {
+
+		//if ctx.Update().Message == nil || ctx.Update().Message.Chat == nil {
+		//	return nil
+		//}
+
+		msg := update.Message
+		if msg == nil {
+			return nil
+		}
+
+		keyboard := make([][]telego.InlineKeyboardButton, 0)
+		for _, prog := range installer.GetLocalVersion(config.Installer.Programs) {
+			keyboard = append(keyboard, tu.InlineKeyboardRow(
+				tu.InlineKeyboardButton(prog.App).WithCallbackData("program_"+prog.App),
+			))
+		}
+		keyboard = append(keyboard, tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("❌ Закрыть").WithCallbackData("close"),
+		))
+
+		chatID := tu.ID(msg.Chat.ID)
+
+		fmt.Sprintf("chatID: %s", chatID)
+
+		_, err := ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+			ChatID:      chatID,
+			Text:        "📋 Список приложений:",
+			ReplyMarkup: tu.InlineKeyboard(keyboard...),
+		})
+		return err
+	}, th.CommandEqual("go"))
+
 	_ = bh.Start()
 }
 
@@ -530,6 +681,13 @@ func sanitizeCallback(s string) string {
 	s = strings.ReplaceAll(s, " ", "_")
 	re := regexp.MustCompile(`[^a-z0-9\-_]`)
 	return re.ReplaceAllString(s, "")
+}
+
+func safe(s string) string {
+	if s == "" {
+		return "—"
+	}
+	return s
 }
 
 // Определяем функцию для создания клавиатуры для benchmark-режима
