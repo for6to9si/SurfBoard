@@ -15,6 +15,7 @@ type Config struct {
 	SwayConf          SwayConf          `json:"swayConf"`
 	BenchmarkSettings BenchmarkSettings `json:"benchmarkSettings"`
 	TgBot             TgBot             `json:"tgBot"`
+	Github            Github            `json:"github"`
 	Installer         Installer         `json:"installer"`
 }
 type Paths struct {
@@ -86,6 +87,10 @@ type TgBot struct {
 	Token    string  `json:"TOKEN"`
 	AdminIds []int64 `json:"adminIds"`
 }
+
+type Github struct {
+	Token string `json:"TOKEN"`
+}
 type Programm struct {
 	ExecutablePath string   `json:"executablePath"`
 	Args           []string `json:"args"`
@@ -98,8 +103,10 @@ type Installer struct {
 	Programs  map[string]Programm `json:"programs"`
 }
 
+var surConfig Config
+
 // LoadConfig загружает конфигурацию из JSON-файла
-func LoadConfig(path string) (*Config, error) {
+func InitConfig(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		msg, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
@@ -108,7 +115,7 @@ func LoadConfig(path string) (*Config, error) {
 				"Path": path,
 			},
 		})
-		return nil, fmt.Errorf("%s: %w", msg, err)
+		return fmt.Errorf("%s: %w", msg, err)
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
@@ -122,18 +129,22 @@ func LoadConfig(path string) (*Config, error) {
 		}
 	}()
 
-	var config Config
-	if err := json.NewDecoder(file).Decode(&config); err != nil {
+	if err := json.NewDecoder(file).Decode(&surConfig); err != nil {
 		msg, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
 			MessageID: "error_decoding_json",
 			TemplateData: map[string]string{
 				"Path": path,
 			},
 		})
-		return nil, fmt.Errorf("%s: %w", msg, err)
+		return fmt.Errorf("%s: %w", msg, err)
 	}
 
-	return &config, nil
+	return nil
+}
+
+// GetConfig возвращает копию структуры конфигурации
+func GetConfig() Config {
+	return surConfig // возвращаем копию (безопасно!)
 }
 
 func getLang() string {

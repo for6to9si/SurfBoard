@@ -86,5 +86,6 @@ func RegisterHandlers(
 	isUserAuthorized func(int64) bool,
 ) {
 	registerStartHandler(bh, bot, config, isUserAuthorized)
+	registerHandlers(bh, bot, config, isUserAuthorized)
 	registerCallbackHandler(bh, bot, config, xrayClient, benchmarkClient, isUserAuthorized)
 }

@@ -103,12 +103,29 @@ func parseOutput(out string) (version, commit, gov string) {
 }
 
 func getRelease(url string) (string, error) {
+	client := &http.Client{}
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	token := conf.GetConfig().Github.Token
+	if token != "" {
+		req.Header.Set("Authorization", "token "+token)
+	}
+
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusForbidden {
+		return fmt.Sprintln("GitHub API rate limit exceeded"), nil
+	}
 
 	var release Release
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
@@ -124,6 +141,8 @@ func runCommand(ctx context.Context, app string, path string, args []string, url
 		Path: path,
 		Args: strings.Join(args, " "),
 	}
+
+	info.Release, _ = getRelease(url)
 
 	// Проверяем наличие исполняемого файла
 	if _, err := os.Stat(path); err != nil {
@@ -162,7 +181,6 @@ func runCommand(ctx context.Context, app string, path string, args []string, url
 	info.Commit = commit
 	info.GoVer = gov
 	info.Url = url
-	info.Release, _ = getRelease(url)
 	info.CompareVersions = compareVersions(version, info.Release)
 	return info
 }

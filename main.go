@@ -69,7 +69,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	config, err := conf.LoadConfig(finalConfigPath)
+	err := conf.InitConfig(finalConfigPath)
+
 	if err != nil {
 		msg, _ := locale.Loc.Localize(&i18n.LocalizeConfig{
 			MessageID: "config_load_failed",
@@ -81,6 +82,8 @@ func main() {
 		fmt.Println(msg)
 		os.Exit(1)
 	}
+
+	config := conf.GetConfig()
 
 	// Конфигурация для первого xray-сервера
 	xraygRpcclient, err := grpcClient.NewGRpcClient(config.XwayConf.Grpc)
@@ -110,5 +113,5 @@ func main() {
 
 	// ✅ Запуск Telegram-бота в отдельном пакете
 	ctx := context.Background()
-	service.RunTgBot(ctx, config, xraygRpcclient, benchmarkclient)
+	service.RunTgBot(ctx, &config, xraygRpcclient, benchmarkclient)
 }

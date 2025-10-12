@@ -89,6 +89,10 @@
             2222222
         ]
     },
+    "github":
+    {
+      "TOKEN": "aaaaaa:AAdp9_PB-d7pm_5ido"
+    },
     "installer":
     {
         "isEnabled": true,
