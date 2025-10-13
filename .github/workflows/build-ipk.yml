@@ -31,6 +31,10 @@ jobs:
           - os: linux
             arch: amd64
             output: surfboard-amd64
+          - os: linux
+            arch: mips
+            output: surfboard-mips
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
