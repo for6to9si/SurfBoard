@@ -92,16 +92,16 @@ func registerCallbackHandler(
 
 				switch {
 				case !program.Installed:
-					text = fmt.Sprintf("📦 %s — не установлена ❌", program.App)
-
-				case program.CompareVersions > 0:
-					text = fmt.Sprintf("🚀 %s v%s → %s 🔼", program.App, program.Version, program.Release)
-
-				case program.CompareVersions == 0:
-					text = fmt.Sprintf("✅ %s v%s", program.App, program.Version)
+					text = fmt.Sprintf("❌ %s  —  не установлена", program.App)
 
 				case program.CompareVersions < 0:
-					text = fmt.Sprintf("🧪 %s v%s (тест)", program.App, program.Version)
+					text = fmt.Sprintf("⬆️ %s  •  v%s → %s", program.App, program.Version, program.Release)
+
+				case program.CompareVersions == 0:
+					text = fmt.Sprintf("🟢 %s  •  v%s", program.App, program.Version)
+
+				case program.CompareVersions > 0:
+					text = fmt.Sprintf("⚙️ %s  •  v%s (dev)", program.App, program.Version)
 				}
 
 				btn = tu.InlineKeyboardButton(text).
