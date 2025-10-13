@@ -38,6 +38,12 @@ type AppCommand struct {
 	Url  string   `json:"Url"`  //
 }
 
+// структура ответа GitHub API для последнего релиза
+type Release struct {
+	TagName string `json:"tag_name"`
+	HTMLURL string `json:"html_url"`
+}
+
 // регулярки для разбора
 var (
 	semverRe     = regexp.MustCompile(`\d+\.\d+\.\d+(?:[-+][A-Za-z0-9\.\-_]+)?`) // 1.2.3, 1.2.3-rc1, 1.2.3+meta
