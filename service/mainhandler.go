@@ -86,21 +86,28 @@ func registerCallbackHandler(
 
 			rows := make([][]telego.InlineKeyboardButton, 0, len(programs)+1)
 
-			var btn telego.InlineKeyboardButton
-
 			for _, program := range programs {
+				var btn telego.InlineKeyboardButton
+				var text string
 
-				// создаём кнопку через helper (возвращает telego.InlineKeyboardButton)
-				if !program.Installed {
-					tmp := fmt.Sprintf("%s не установлена ❌\n", program.App)
-					btn = tu.InlineKeyboardButton(tmp).WithCallbackData("program_" + sanitizeCallback(program.App))
-				} else {
-					btn = tu.InlineKeyboardButton(program.App).WithCallbackData("program_" + sanitizeCallback(program.App))
+				switch {
+				case !program.Installed:
+					text = fmt.Sprintf("📦 %s — не установлена ❌", program.App)
+
+				case program.CompareVersions > 0:
+					text = fmt.Sprintf("🚀 %s v%s → %s 🔼", program.App, program.Version, program.Release)
+
+				case program.CompareVersions == 0:
+					text = fmt.Sprintf("✅ %s v%s", program.App, program.Version)
+
+				case program.CompareVersions < 0:
+					text = fmt.Sprintf("🧪 %s v%s (тест)", program.App, program.Version)
 				}
 
-				// tu.InlineKeyboardRow(btn) возвращает []telego.InlineKeyboardButton — можно сразу append
-				rows = append(rows, tu.InlineKeyboardRow(btn))
+				btn = tu.InlineKeyboardButton(text).
+					WithCallbackData("program_" + sanitizeCallback(program.App))
 
+				rows = append(rows, tu.InlineKeyboardRow(btn))
 			}
 
 			// добавляем кнопку "Назад"
