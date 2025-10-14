@@ -102,35 +102,35 @@
             {
                 "executablePath": "/opt/sbin/xray",
                 "args":["version"],
-                "update_url": "https://api.github.com/repos/for6to9si/X-wave/releases/latest",
+                "repo": "for6to9si/X-wave",
                 "isEnabled": true
             },
             "sing-box":
             {
                 "executablePath": "/opt/sbin/sing-box",
                 "args":["version"],
-                "update_url": "https://api.github.com/repos/for6to9si/S-wave/releases/latest",
+                "repo": "for6to9si/S-wave",
                 "isEnabled": true
             },
             "surfBoard":
             {
                 "executablePath": "/opt/sbin/surfboard",
                 "args":["-version"],
-                "update_url": "https://api.github.com/repos/for6to9si/SurfBoard/releases/latest",
+                "repo": "for6to9si/SurfBoard",
                 "isEnabled": true
             },
             "youtubeUnblock":
             {
                 "executablePath": "/opt/bin/youtubeUnblock",
                 "args":["--version"],
-                "update_url": "https://api.github.com/repos/Waujito/youtubeUnblock/releases/latest",
+                "repo": "Waujito/youtubeUnblock",
                 "isEnabled": true
             },
             "nfqws":
             {
                 "executablePath": "/opt/usr/bin/nfqws",
                 "args":["--version"],
-                "update_url": "https://api.github.com/repos/Anonym-tsk/nfqws-keenetic/releases/latest",
+                "repo": "Anonym-tsk/nfqws-keenetic",
                 "isEnabled": false
             }
         }

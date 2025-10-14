@@ -108,8 +108,10 @@ func parseOutput(out string) (version, commit, gov string) {
 	return version, commit, gov
 }
 
-func getRelease(url string) (string, error) {
+func getRelease(repo string) (string, error) {
 	client := &http.Client{}
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -141,14 +143,14 @@ func getRelease(url string) (string, error) {
 	return release.TagName, nil
 }
 
-func runCommand(ctx context.Context, app string, path string, args []string, url string, timeout time.Duration) VersionInfo {
+func runCommand(ctx context.Context, app string, path string, args []string, repo string, timeout time.Duration) VersionInfo {
 	info := VersionInfo{
 		App:  app,
 		Path: path,
 		Args: strings.Join(args, " "),
 	}
 
-	info.Release, _ = getRelease(url)
+	info.Release, _ = getRelease(repo)
 
 	// Проверяем наличие исполняемого файла
 	if _, err := os.Stat(path); err != nil {
@@ -186,7 +188,7 @@ func runCommand(ctx context.Context, app string, path string, args []string, url
 	info.Version = version
 	info.Commit = commit
 	info.GoVer = gov
-	info.Url = url
+	info.Url = fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 	info.CompareVersions = compareVersions(version, info.Release)
 	return info
 }
@@ -212,14 +214,14 @@ func GetLocalVersion(commands map[string]conf.Programm) []VersionInfo {
 
 	for name, cmd := range commands {
 		wg.Add(1)
-		go func(app string, path string, args []string, url string) {
+		go func(app string, path string, args []string, repo string) {
 			defer wg.Done()
 			// таймаут 5 секунд на выполнение каждой команды (можно увеличить)
-			info := runCommand(ctx, app, path, args, url, 5*time.Second)
+			info := runCommand(ctx, app, path, args, repo, 5*time.Second)
 			mu.Lock()
 			results = append(results, info)
 			mu.Unlock()
-		}(name, cmd.ExecutablePath, cmd.Args, cmd.UpdateURL)
+		}(name, cmd.ExecutablePath, cmd.Args, cmd.Repo)
 	}
 	wg.Wait()
 

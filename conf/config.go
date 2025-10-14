@@ -92,10 +92,11 @@ type Github struct {
 	Token string `json:"TOKEN"`
 }
 type Programm struct {
-	ExecutablePath string   `json:"executablePath"`
-	Args           []string `json:"args"`
-	UpdateURL      string   `json:"update_url"`
-	IsEnabled      bool     `json:"isEnabled"`
+	ExecutablePath string            `json:"executablePath"`
+	Args           []string          `json:"args"`
+	Repo           string            `json:"repo"`
+	IsEnabled      bool              `json:"isEnabled"`
+	ArchPatterns   map[string]string `json:"arch_patterns"`
 }
 
 type Installer struct {
