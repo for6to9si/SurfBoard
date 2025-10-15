@@ -103,6 +103,13 @@
                 "executablePath": "/opt/sbin/xray",
                 "args":["version"],
                 "repo": "for6to9si/X-wave",
+                "arch_patterns": {
+                  "amd64": "(?i)(amd64).*?\\.(ipk|tar\\.gz)$",
+                  "i386": "(?i)(i386).*?\\.(ipk|tar\\.gz)$",
+                  "arm64": "(?i)(arm64|aarch64).*?\\.(ipk|tar\\.gz)$",
+                  "mipsle": "(?i)(mips32le|mipsle).*?\\.(ipk|tar\\.gz)$",
+                  "mips": "(?i)mips(32|64)\\.(?:.*\\.)?(?:ipk|tar\\.gz)$"
+                },
                 "isEnabled": true
             },
             "sing-box":
@@ -110,6 +117,13 @@
                 "executablePath": "/opt/sbin/sing-box",
                 "args":["version"],
                 "repo": "for6to9si/S-wave",
+                "arch_patterns": {
+                  "amd64": "(?i)(amd64).*?\\.(ipk|tar\\.gz)$",
+                  "i386": "(?i)(i386).*?\\.(ipk|tar\\.gz)$",
+                  "arm64": "(?i)(arm64|aarch64).*?\\.(ipk|tar\\.gz)$",
+                  "mipsle": "(?i)(mipsel|mipsle).*?\\.(ipk|tar\\.gz)$",
+                  "mips": "(?i)(^|[-_.])mips([-_.]|$).*?\\.(ipk|tar\\.gz)$"
+                },
                 "isEnabled": true
             },
             "surfBoard":
@@ -117,6 +131,13 @@
                 "executablePath": "/opt/sbin/surfboard",
                 "args":["-version"],
                 "repo": "for6to9si/SurfBoard",
+                "arch_patterns": {
+                  "amd64": "(?i)(amd64).*?\\.(ipk|tar\\.gz)$",
+                  "i386": "(?i)(i386).*?\\.(ipk|tar\\.gz)$",
+                  "arm64": "(?i)(arm64|aarch64).*?\\.(ipk|tar\\.gz)$",
+                  "mipsle": "(?i)(mipsel|mipsle).*?\\.(ipk|tar\\.gz)$",
+                  "mips": "(?i)mips\\.(?:.*\\.)?(?:ipk|tar\\.gz)$"
+                },
                 "isEnabled": true
             },
             "youtubeUnblock":
@@ -124,6 +145,11 @@
                 "executablePath": "/opt/bin/youtubeUnblock",
                 "args":["--version"],
                 "repo": "Waujito/youtubeUnblock",
+                "arch_patterns": {
+                  "arm64": "(?i)(entware.*aarch64).*?\\.(ipk|tar\\.gz)$",
+                  "mipsle": "(?i)(entware.*(mipsel|mipsle)).*?\\.(ipk|tar\\.gz)$",
+                  "mips": "(?i)entware.*\\bmips\\b.*?\\.(ipk|tar\\.gz)$"
+                },
                 "isEnabled": true
             },
             "nfqws":
@@ -131,6 +157,10 @@
                 "executablePath": "/opt/usr/bin/nfqws",
                 "args":["--version"],
                 "repo": "Anonym-tsk/nfqws-keenetic",
+                "arch_patterns": {
+                  "mipsle": "(?i)(mipsel|mipsle).*?\\.(ipk|tar\\.gz)$",
+                  "mips": "(?i)(^|[-_.])mips([-_.]|$).*?\\.(ipk|tar\\.gz)$"
+                },
                 "isEnabled": false
             }
         }

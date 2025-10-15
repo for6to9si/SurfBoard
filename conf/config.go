@@ -97,6 +97,7 @@ type Programm struct {
 	Repo           string            `json:"repo"`
 	IsEnabled      bool              `json:"isEnabled"`
 	ArchPatterns   map[string]string `json:"arch_patterns"`
+	OnlyRelease    bool              `json:"only_release,omitempty"`
 }
 
 type Installer struct {
