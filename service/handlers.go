@@ -100,6 +100,70 @@ func registerHandlers(
 		})
 		return err
 	}, th.CallbackDataPrefix("program_"))
+
+	//bh.Handle(func(ctx *th.Context, update telego.Update) error {
+	//	query := update.CallbackQuery
+	//	if query == nil || query.Data != "manage_apps" {
+	//		return nil
+	//	}
+	//
+	//	loc := locale.Getlocalizer(query.From.LanguageCode)
+	//
+	//	if !isUserAuthorized(query.From.ID) {
+	//		msg, _ := loc.Localize(&i18n.LocalizeConfig{
+	//			MessageID: "access_denied",
+	//			TemplateData: map[string]interface{}{
+	//				"UserID": query.From.ID,
+	//			},
+	//		})
+	//		_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), msg))
+	//		_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
+	//		return nil
+	//	}
+	//
+	//	// Устанавливаем состояние пользователя
+	//	user.State = StateSetupApps
+	//
+	//	// Получаем список программ
+	//	programs := installer.GetLocalVersion(config.Installer.Programs)
+	//	rows := make([][]telego.InlineKeyboardButton, 0, len(programs)+1)
+	//
+	//	for _, program := range programs {
+	//		var text string
+	//		switch {
+	//		case !program.Installed:
+	//			text = fmt.Sprintf("❌ %s  —  не установлена", program.App)
+	//		case program.CompareVersions > 0:
+	//			text = fmt.Sprintf("⬆️ %s  •  v%s → %s", program.App, program.Version, program.Release)
+	//		case program.CompareVersions == 0:
+	//			text = fmt.Sprintf("🟢 %s  •  v%s", program.App, program.Version)
+	//		case program.CompareVersions < 0:
+	//			text = fmt.Sprintf("⚙️ %s  •  v%s (dev)", program.App, program.Version)
+	//		}
+	//
+	//		btn := tu.InlineKeyboardButton(text).
+	//			WithCallbackData("program_" + sanitizeCallback(program.App))
+	//		rows = append(rows, tu.InlineKeyboardRow(btn))
+	//	}
+	//
+	//	// Добавляем кнопку "Назад"
+	//	backBtn := tu.InlineKeyboardButton("⬅️ Назад").
+	//		WithCallbackData("back_to_main")
+	//	rows = append(rows, tu.InlineKeyboardRow(backBtn))
+	//
+	//	// Отправляем сообщение с клавиатурой
+	//	_, _ = bot.SendMessage(
+	//		ctx,
+	//		tu.Message(
+	//			tu.ID(query.Message.GetChat().ID),
+	//			"📦 Applications:",
+	//		).WithReplyMarkup(tu.InlineKeyboard(rows...)),
+	//	)
+	//
+	//	_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
+	//	return nil
+	//}, th.CallbackDataPrefix("manage_apps"))
+
 }
 
 func safe(s string) string {

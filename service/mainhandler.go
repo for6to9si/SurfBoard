@@ -94,13 +94,13 @@ func registerCallbackHandler(
 				case !program.Installed:
 					text = fmt.Sprintf("❌ %s  —  не установлена", program.App)
 
-				case program.CompareVersions < 0:
+				case program.CompareVersions > 0:
 					text = fmt.Sprintf("⬆️ %s  •  v%s → %s", program.App, program.Version, program.Release)
 
 				case program.CompareVersions == 0:
 					text = fmt.Sprintf("🟢 %s  •  v%s", program.App, program.Version)
 
-				case program.CompareVersions > 0:
+				case program.CompareVersions < 0:
 					text = fmt.Sprintf("⚙️ %s  •  v%s (dev)", program.App, program.Version)
 				}
 
@@ -115,7 +115,23 @@ func registerCallbackHandler(
 			rows = append(rows, tu.InlineKeyboardRow(backBtn))
 
 			// отправляем — tu.InlineKeyboard принимает variadic rows
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "📦 Applications:").WithReplyMarkup(tu.InlineKeyboard(rows...)))
+			//_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "📦 Applications:").WithReplyMarkup(tu.InlineKeyboard(rows...)))
+			//_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "📦 Applications:").WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: rows}))
+			_, err := ctx.Bot().EditMessageText(ctx, &telego.EditMessageTextParams{
+				ChatID:      tu.ID(query.Message.GetChat().ID),
+				MessageID:   query.Message.GetMessageID(),
+				Text:        "📦 Applications:",
+				ParseMode:   telego.ModeMarkdown,
+				ReplyMarkup: tu.InlineKeyboard(rows...),
+			})
+
+			if err != nil {
+				// если не удалось отредактировать — fallback на SendMessage
+				_, _ = ctx.Bot().SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "📦 Applications:").WithReplyMarkup(tu.InlineKeyboard(rows...)))
+			}
+
+			// всегда отвечаем на callback, чтобы убрать "часики"
+			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
 
 		case "benchmark_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "Запуск benchmark режима..."))
