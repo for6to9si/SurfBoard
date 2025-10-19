@@ -205,6 +205,14 @@ func compareVersions(local, remote string) int {
 }
 
 func GetLocalVersion(commands map[string]conf.Programm) []VersionInfo {
+
+	// 1️⃣ Проверяем кэш
+	if cached, ok := loadCache(); ok {
+		fmt.Println("📦 Используется кэш версий (моложе 15 минут)")
+		return cached
+	}
+
+	// 2️⃣ Если кэша нет — делаем обычный запрос
 	// параллельно выполняем все команды
 	ctx := context.Background()
 	var wg sync.WaitGroup
@@ -230,6 +238,61 @@ func GetLocalVersion(commands map[string]conf.Programm) []VersionInfo {
 		return results[i].App < results[j].App
 	})
 
+	// 3️⃣ Сохраняем в кэш
+	saveCache(results)
+	fmt.Println("💾 Кэш версий обновлён")
+
 	return results
 
+}
+
+// ---------- Кэширование результатов ----------
+
+const cacheFile = "version_cache.json"
+
+//const cacheTTL = 15 * time.Minute
+
+// saveCache сохраняет срез VersionInfo в файл
+func saveCache(data []VersionInfo) {
+	file, err := os.Create(cacheFile)
+	if err != nil {
+		fmt.Println("⚠️ Ошибка записи кэша:", err)
+		return
+	}
+	defer file.Close()
+
+	enc := json.NewEncoder(file)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(struct {
+		Timestamp time.Time     `json:"timestamp"`
+		Data      []VersionInfo `json:"data"`
+	}{
+		Timestamp: time.Now(),
+		Data:      data,
+	})
+}
+
+// loadCache пытается загрузить данные из кэша, если он не устарел
+func loadCache() ([]VersionInfo, bool) {
+	file, err := os.Open(cacheFile)
+	if err != nil {
+		return nil, false
+	}
+	defer file.Close()
+
+	var cached struct {
+		Timestamp time.Time     `json:"timestamp"`
+		Data      []VersionInfo `json:"data"`
+	}
+
+	if err := json.NewDecoder(file).Decode(&cached); err != nil {
+		return nil, false
+	}
+
+	// Проверяем срок годности
+	if time.Since(cached.Timestamp) > cacheTTL {
+		return nil, false
+	}
+
+	return cached.Data, true
 }

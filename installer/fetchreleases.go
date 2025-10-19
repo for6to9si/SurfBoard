@@ -186,8 +186,6 @@ func fetchLatestForRepo(cfg RepoConfig, maxPerArch int) string {
 	return sb.String()
 }
 
-// ---------- MAIN ----------
-
 func RepoConfigs(install conf.Installer, app conf.Programm) string {
 	var sb strings.Builder
 	repos, err := LoadRepoConfigs(install)
