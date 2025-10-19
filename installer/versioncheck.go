@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -248,7 +249,7 @@ func GetLocalVersion(commands map[string]conf.Programm) []VersionInfo {
 
 // ---------- Кэширование результатов ----------
 
-const cacheFile = "version_cache.json"
+var cacheFile = filepath.Join(cacheDir, "version_cache.json")
 
 //const cacheTTL = 15 * time.Minute
 

@@ -94,7 +94,7 @@ func registerHandlers(
 			fmt.Sprintf("❌ Репозиторий %s не найден в конфиге\n", appName)
 		}
 
-		msg += EscapeMarkdownV2(installer.RepoConfigs(config.Installer, *cfg))
+		msg += EscapeMarkdownV2(installer.RepoConfigs(config.Installer, cfg.Repo))
 		// Редактируем сообщение безопасно
 		_, err := ctx.Bot().EditMessageText(ctx, &telego.EditMessageTextParams{
 			ChatID:    tu.ID(cq.Message.GetChat().ID),

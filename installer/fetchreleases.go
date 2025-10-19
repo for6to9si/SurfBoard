@@ -186,7 +186,7 @@ func fetchLatestForRepo(cfg RepoConfig, maxPerArch int) string {
 	return sb.String()
 }
 
-func RepoConfigs(install conf.Installer, app conf.Programm) string {
+func RepoConfigs(install conf.Installer, repoName string) string {
 	var sb strings.Builder
 	repos, err := LoadRepoConfigs(install)
 	if err != nil {
@@ -195,7 +195,7 @@ func RepoConfigs(install conf.Installer, app conf.Programm) string {
 
 	var cfg RepoConfig
 	for _, r := range repos {
-		if r.Repo == app.Repo {
+		if r.Repo == repoName {
 			cfg = r
 			break
 		}
