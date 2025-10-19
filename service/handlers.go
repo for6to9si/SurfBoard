@@ -82,7 +82,19 @@ func registerHandlers(
 			status,
 		)
 
-		installer.RepoConfigs(config.Installer)
+		var cfg *conf.Programm
+		for key, r := range config.Installer.Programs {
+			if strings.EqualFold(key, appName) {
+				cfg = &r
+				break
+			}
+		}
+
+		if cfg == nil {
+			fmt.Sprintf("❌ Репозиторий %s не найден в конфиге\n", appName)
+		}
+
+		msg += EscapeMarkdownV2(installer.RepoConfigs(config.Installer, *cfg))
 		// Редактируем сообщение безопасно
 		_, err := ctx.Bot().EditMessageText(ctx, &telego.EditMessageTextParams{
 			ChatID:    tu.ID(cq.Message.GetChat().ID),
@@ -109,4 +121,29 @@ func safe(s string) string {
 		return "—"
 	}
 	return s
+}
+
+// EscapeMarkdownV2 экранирует все специальные символы Telegram MarkdownV2
+func EscapeMarkdownV2(text string) string {
+	replacer := strings.NewReplacer(
+		"_", "\\_",
+		"*", "\\*",
+		"[", "\\[",
+		"]", "\\]",
+		"(", "\\(",
+		")", "\\)",
+		"~", "\\~",
+		"`", "\\`",
+		">", "\\>",
+		"#", "\\#",
+		"+", "\\+",
+		"-", "\\-",
+		"=", "\\=",
+		"|", "\\|",
+		"{", "\\{",
+		"}", "\\}",
+		".", "\\.",
+		"!", "\\!",
+	)
+	return replacer.Replace(text)
 }

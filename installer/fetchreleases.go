@@ -28,7 +28,6 @@ type GitHubRelease struct {
 type RepoConfig struct {
 	Repo         string
 	ArchPatterns map[string]*regexp.Regexp
-	FilterFunc   func(assetName string, release GitHubRelease) bool
 }
 
 type repoJSON struct {
@@ -60,15 +59,6 @@ func LoadRepoConfigs(install conf.Installer) ([]RepoConfig, error) {
 		cfg := RepoConfig{
 			Repo:         r.Repo,
 			ArchPatterns: compiled,
-		}
-
-		if r.OnlyRelease {
-			cfg.FilterFunc = func(assetName string, release GitHubRelease) bool {
-				if r.OnlyRelease && release.Prerelease {
-					return false
-				}
-				return true
-			}
 		}
 
 		configs = append(configs, cfg)
@@ -148,61 +138,72 @@ func fetchReleases(repo string) ([]GitHubRelease, error) {
 
 // ---------- Основная логика ----------
 
-func fetchLatestForRepo(cfg RepoConfig, maxPerArch int) {
+func fetchLatestForRepo(cfg RepoConfig, maxPerArch int) string {
 	releases, err := fetchReleases(cfg.Repo)
+
+	var sb strings.Builder
+
 	if err != nil {
-		fmt.Printf("❌ %s: %v\n", cfg.Repo, err)
-		return
+		return fmt.Sprintf("❌ %s: %v\n", cfg.Repo, err)
 	}
 
-	fmt.Printf("\n📦 %s:\n", cfg.Repo)
+	sb.WriteString(fmt.Sprintf("\n📦 %s:\n", cfg.Repo))
 
-	for arch, re := range cfg.ArchPatterns {
-		var results []string
+	arch := "mipsle"
 
-		for _, release := range releases {
-			for _, asset := range release.Assets {
-				name := asset.Name
-				if !strings.HasSuffix(name, ".ipk") && !strings.HasSuffix(name, ".tar.gz") {
-					continue
-				}
-				if !re.MatchString(name) {
-					continue
-				}
-				if cfg.FilterFunc != nil && !cfg.FilterFunc(name, release) {
-					continue
-				}
+	re := cfg.ArchPatterns[arch]
+	var results []string
 
-				results = append(results, fmt.Sprintf("https://github.com/%s/releases/download/%s/%s (v%s)",
-					cfg.Repo, release.TagName, name, release.TagName))
+	for _, release := range releases {
+		for _, asset := range release.Assets {
+			name := asset.Name
+			if !strings.HasSuffix(name, ".ipk") && !strings.HasSuffix(name, ".tar.gz") {
+				continue
 			}
-		}
+			if !re.MatchString(name) {
+				continue
+			}
 
-		if len(results) == 0 {
-			continue
-		}
-
-		sort.Slice(results, func(i, j int) bool { return i < j })
-		if len(results) > maxPerArch {
-			results = results[:maxPerArch]
-		}
-
-		fmt.Printf("  🧩 %s:\n", arch)
-		for _, link := range results {
-			fmt.Printf("    %s\n", link)
+			results = append(results, fmt.Sprintf("https://github.com/%s/releases/download/%s/%s (v%s)",
+				cfg.Repo, release.TagName, name, release.TagName))
 		}
 	}
+
+	if len(results) == 0 {
+		return fmt.Sprintf("❌ %s: %v\n", cfg.Repo, err)
+	}
+
+	sort.Slice(results, func(i, j int) bool { return i < j })
+	if len(results) > maxPerArch {
+		results = results[:maxPerArch]
+	}
+
+	sb.WriteString(fmt.Sprintf("  🧩 %s:\n", arch))
+	for _, link := range results {
+		sb.WriteString(fmt.Sprintf("    %s\n", link))
+	}
+
+	return sb.String()
 }
 
 // ---------- MAIN ----------
 
-func RepoConfigs(install conf.Installer) {
+func RepoConfigs(install conf.Installer, app conf.Programm) string {
+	var sb strings.Builder
 	repos, err := LoadRepoConfigs(install)
 	if err != nil {
 		panic(err)
 	}
 
-	for _, cfg := range repos {
-		fetchLatestForRepo(cfg, 9)
+	var cfg RepoConfig
+	for _, r := range repos {
+		if r.Repo == app.Repo {
+			cfg = r
+			break
+		}
 	}
+
+	sb.WriteString(fetchLatestForRepo(cfg, 3))
+
+	return sb.String()
 }
