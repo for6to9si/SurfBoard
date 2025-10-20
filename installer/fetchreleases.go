@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -34,6 +35,11 @@ type repoJSON struct {
 	Repo         string            `json:"repo"`
 	ArchPatterns map[string]string `json:"arch_patterns"`
 	OnlyRelease  bool              `json:"only_release,omitempty"`
+}
+
+type AppLinkButton struct {
+	BrowserDownloadURL string
+	Version            string
 }
 
 // ---------- Константы ----------
@@ -138,21 +144,17 @@ func fetchReleases(repo string) ([]GitHubRelease, error) {
 
 // ---------- Основная логика ----------
 
-func fetchLatestForRepo(cfg RepoConfig, maxPerArch int) string {
+func fetchLatestForRepo(cfg RepoConfig, maxPerArch int) []AppLinkButton {
 	releases, err := fetchReleases(cfg.Repo)
-
-	var sb strings.Builder
-
 	if err != nil {
-		return fmt.Sprintf("❌ %s: %v\n", cfg.Repo, err)
+		fmt.Printf("❌ %s: %v\n", cfg.Repo, err)
+		return nil
 	}
 
-	sb.WriteString(fmt.Sprintf("\n📦 %s:\n", cfg.Repo))
+	var sb []AppLinkButton
 
 	arch := "mipsle"
-
 	re := cfg.ArchPatterns[arch]
-	var results []string
 
 	for _, release := range releases {
 		for _, asset := range release.Assets {
@@ -164,30 +166,58 @@ func fetchLatestForRepo(cfg RepoConfig, maxPerArch int) string {
 				continue
 			}
 
-			results = append(results, fmt.Sprintf("https://github.com/%s/releases/download/%s/%s (v%s)",
-				cfg.Repo, release.TagName, name, release.TagName))
+			sb = append(sb, AppLinkButton{
+				BrowserDownloadURL: fmt.Sprintf("https://github.com/%s/releases/download/%s/%s",
+					cfg.Repo, release.TagName, name),
+				Version: release.TagName,
+			})
+
+			// ⛔ Остановимся, если достигли лимита
+			if len(sb) >= maxPerArch {
+				break
+			}
+		}
+
+		// выход из внешнего цикла, если уже достигли лимита
+		if len(sb) >= maxPerArch {
+			break
 		}
 	}
 
-	if len(results) == 0 {
-		return fmt.Sprintf("❌ %s: %v\n", cfg.Repo, err)
-	}
+	// сортируем версии по возрастанию
+	sort.Slice(sb, func(i, j int) bool {
+		return versionLess(sb[i].Version, sb[j].Version)
+	})
 
-	sort.Slice(results, func(i, j int) bool { return i < j })
-	if len(results) > maxPerArch {
-		results = results[:maxPerArch]
-	}
-
-	sb.WriteString(fmt.Sprintf("  🧩 %s:\n", arch))
-	for _, link := range results {
-		sb.WriteString(fmt.Sprintf("    %s\n", link))
-	}
-
-	return sb.String()
+	return sb
 }
 
-func RepoConfigs(install conf.Installer, repoName string) string {
-	var sb strings.Builder
+func versionLess(a, b string) bool {
+	ap, bp := strings.Split(a, "."), strings.Split(b, ".")
+	for i := 0; i < max(len(ap), len(bp)); i++ {
+		ai, bi := 0, 0
+		if i < len(ap) {
+			ai, _ = strconv.Atoi(ap[i])
+		}
+		if i < len(bp) {
+			bi, _ = strconv.Atoi(bp[i])
+		}
+		if ai != bi {
+			return ai < bi
+		}
+	}
+	return false
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func RepoConfigs(install conf.Installer, repoName string) []AppLinkButton {
+
 	repos, err := LoadRepoConfigs(install)
 	if err != nil {
 		panic(err)
@@ -201,7 +231,5 @@ func RepoConfigs(install conf.Installer, repoName string) string {
 		}
 	}
 
-	sb.WriteString(fetchLatestForRepo(cfg, 3))
-
-	return sb.String()
+	return fetchLatestForRepo(cfg, 3)
 }
