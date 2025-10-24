@@ -74,7 +74,7 @@ func registerHandlers(
 				"📦 Локальная версия: `%s`\n"+
 				"🌐 Последняя версия: `%s`\n"+
 				"💾 Путь: `%s`\n"+
-				"📊 Состояние: %s",
+				"📊 Состояние: %s\n",
 			selected.App,
 			safe(selected.Version),
 			safe(selected.Release),
@@ -94,26 +94,32 @@ func registerHandlers(
 			fmt.Sprintf("❌ Репозиторий %s не найден в конфиге\n", appName)
 		}
 
-		sb := installer.RepoConfigs(config.Installer, cfg.Repo)
+		versions := installer.RepoConfigs(config.Installer, cfg.Repo)
 
-		versions := make([]string, len(sb))
-		for i, v := range sb {
-			versions[i] = v.Version
+		rows := make([][]telego.InlineKeyboardButton, 0, len(versions)+1)
+
+		for _, v := range versions {
+
+			var btn telego.InlineKeyboardButton
+
+			btn = tu.InlineKeyboardButton(fmt.Sprintf("%s %s", sanitizeCallback(appName), v.Version)).
+				WithCallbackData(fmt.Sprintf("deploy_%s_%s", sanitizeCallback(appName), v.Version))
+
+			rows = append(rows, tu.InlineKeyboardRow(btn))
 		}
 
-		msg += "📦 Доступные версии:\n" + strings.Join(versions, "\n")
+		backBtn := tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("manage_apps")
+		rows = append(rows, tu.InlineKeyboardRow(backBtn))
+
+		msg += "📦 Доступные версии:\n"
 
 		// Редактируем сообщение безопасно
 		_, err := ctx.Bot().EditMessageText(ctx, &telego.EditMessageTextParams{
-			ChatID:    tu.ID(cq.Message.GetChat().ID),
-			MessageID: cq.Message.GetMessageID(),
-			Text:      msg,
-			ParseMode: telego.ModeMarkdown,
-			ReplyMarkup: tu.InlineKeyboard(
-				tu.InlineKeyboardRow(
-					tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("manage_apps"),
-				),
-			),
+			ChatID:      tu.ID(cq.Message.GetChat().ID),
+			MessageID:   cq.Message.GetMessageID(),
+			Text:        msg,
+			ParseMode:   telego.ModeMarkdown,
+			ReplyMarkup: tu.InlineKeyboard(rows...),
 		})
 		// Отвечаем на callback, чтобы убрать "часики"
 		_ = ctx.Bot().AnswerCallbackQuery(ctx, &telego.AnswerCallbackQueryParams{
