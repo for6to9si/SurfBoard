@@ -3,7 +3,13 @@ package service
 import (
 	"SurfBoard/conf"
 	"SurfBoard/installer"
+	"bytes"
+	"fmt"
 	"log"
+	"net/url"
+	"os"
+	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/mymmrac/telego"
@@ -74,8 +80,9 @@ func registerDeploy(
 		backBtn := tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("program_" + sanitizeCallback(appName))
 		rows = append(rows, tu.InlineKeyboardRow(backBtn))
 
-		msg := "📦 Доступные версии:\n"
-		msg += EscapeMarkdownV2(selected.BrowserDownloadURL)
+		msg := "📦 Installing:\n"
+
+		msg += installRelease(selected.BrowserDownloadURL)
 
 		// Редактируем сообщение безопасно
 		_, err := ctx.Bot().EditMessageText(ctx, &telego.EditMessageTextParams{
@@ -92,4 +99,63 @@ func registerDeploy(
 		return err
 	}, th.CallbackDataPrefix("deploy_"))
 
+}
+
+func installRelease(urlStr string) string {
+
+	// Получаем имя файла из URL
+	fileName, err := getFileNameFromURL(urlStr)
+	if err != nil {
+		return fmt.Sprintf("Ошибка при получении имени файла: %v", err)
+	}
+
+	var fullLog bytes.Buffer
+
+	fullLog.WriteString(fmt.Sprintf(">>> Обновление списка пакетов..."))
+	if out, err := runCommand("opkg", "update"); err != nil {
+		return fmt.Sprintf("Ошибка при обновлении пакетов: %v\n%s", err, out)
+	} else {
+		fullLog.WriteString(out)
+	}
+
+	fullLog.WriteString(fmt.Sprintf(">>> Скачивание пакета:", urlStr))
+	if out, err := runCommand("wget", "-O", fileName, urlStr); err != nil {
+		return fmt.Sprintf("Ошибка при скачивании файла: %v\n%s", err, out)
+	} else {
+		fullLog.WriteString(out)
+	}
+
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		return fmt.Sprintf("Файл %s не найден после скачивания", fileName)
+	}
+
+	fullLog.WriteString(fmt.Sprintf(">>> Установка пакета..."))
+	if out, err := runCommand("opkg", "install", "--force-downgrade", "./"+fileName); err != nil {
+		return fmt.Sprintf("Ошибка при установке пакета: %v\n%s", err, out)
+	} else {
+		fullLog.WriteString(out)
+	}
+
+	fullLog.WriteString("✅ Установка завершена успешно!")
+	fullLog.WriteString("------ Полный лог выполнения ------")
+	return fullLog.String()
+}
+
+// runCommand выполняет команду и возвращает её вывод (stdout + stderr)
+func runCommand(name string, args ...string) (string, error) {
+	cmd := exec.Command(name, args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	err := cmd.Run()
+	return out.String(), err
+}
+
+// getFileNameFromURL — извлекает имя файла из URL
+func getFileNameFromURL(rawURL string) (string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	return path.Base(u.Path), nil
 }
