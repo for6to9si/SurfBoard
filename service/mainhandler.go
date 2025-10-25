@@ -1,12 +1,13 @@
 package service
 
 import (
+	"SurfBoard/benchmarkMode"
 	"SurfBoard/conf"
 	"SurfBoard/grpcClient"
 	"SurfBoard/installer"
 	"SurfBoard/locale"
-	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -58,7 +59,7 @@ func registerCallbackHandler(
 	bh *th.BotHandler,
 	bot *telego.Bot,
 	config *conf.Config,
-	xrayClient, benchmarkClient *grpcClient.GRpcClient,
+	xraygRpcclient, benchmarkclient *grpcClient.GRpcClient,
 	isUserAuthorized func(int64) bool,
 ) {
 	bh.HandleCallbackQuery(func(ctx *th.Context, query telego.CallbackQuery) error {
@@ -74,6 +75,12 @@ func registerCallbackHandler(
 			_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
 			return nil
 		}
+
+		currentVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "current_vpn"})
+		allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
+		addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
+		//		done, _ := loc.LocalizeMessage(&i18n.Message{ID: "done"})
+		underDevelopment, _ := loc.LocalizeMessage(&i18n.Message{ID: "under_development"})
 
 		switch query.Data {
 
@@ -133,17 +140,119 @@ func registerCallbackHandler(
 			// всегда отвечаем на callback, чтобы убрать "часики"
 			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
 
-		case "benchmark_vpn":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "Запуск benchmark режима..."))
-			go func() {
-				err := runBenchmark(ctx, bot, query.Message.GetChat().ID, benchmarkClient)
-				if err != nil {
-					_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), fmt.Sprintf("Ошибка: %v", err)))
-				}
-			}()
-
 		case "xray_vpn":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "Переключение в Xray режим..."))
+			// Отображаем скрытые кнопки
+			user.State = StateXray
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"VPN options:",
+			).WithReplyMarkup(tu.InlineKeyboard(
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("xray_current_vpn")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("xray_all_vpns")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("xray_add_vpn")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
+			)))
+		case "xray_current_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(xraygRpcclient)))
+		case "xray_all_vpns":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(xraygRpcclient)))
+		case "xray_add_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(xraygRpcclient)))
+
+		case "benchmark_vpn":
+
+			user.State = StateBenchmark
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
+				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
+			}))
+
+		case "benchmark_vpn_on": //DO-TO Delete
+
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StartXray()))
+
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
+				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
+			}))
+
+		case "benchmark_vpn_off":
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				benchmarkMode.StopXray(),
+			))
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
+				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
+			}))
+
+		case "singbox_vpn":
+			user.State = StateSingBox
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				underDevelopment,
+			).WithReplyMarkup(tu.InlineKeyboard(
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
+			)))
+
+		case "benchmark_start_xray":
+
+			tags := benchmarkMode.GetTags(config.BenchmarkSettings.Env.XrayLocationConfdir)
+			for _, line := range tags {
+				// Пропускаем пустые строки, если они есть
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
+			}
+
+			// Формируем полный путь к файлу
+			fulltempdir := filepath.Join(config.BenchmarkSettings.Env.XrayLocationTemplatedir, "routing-settings.generated.json")
+			fullpath := filepath.Join(config.BenchmarkSettings.Env.XrayLocationConfdir, "routing-settings.generated.json")
+
+			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags)
+
+			for _, line := range results {
+				// Пропускаем пустые строки, если они есть
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
+			}
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StartXray()))
+
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
+				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
+			}))
+
+		case "benchmark_stop_xray":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), benchmarkMode.StopXray()))
+
+			_, _ = bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Benchmark mode selected",
+			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
+				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
+			}))
+		case "fast_vpn_test":
+			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
+				return err
+			}
+		case "benchmark_current_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(benchmarkclient)))
+		case "benchmark_all_vpns":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(benchmarkclient)))
+		case "benchmark_add_vpn":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(benchmarkclient)))
 
 		case "back_to_main":
 			// Возвращаемся к начальному меню
@@ -192,18 +301,74 @@ func mainMenu(config *conf.Config) [][]telego.InlineKeyboardButton {
 	return kb
 }
 
-// --- Пример запуска benchmark ---
-func runBenchmark(ctx context.Context, bot *telego.Bot, chatID int64, benchmarkClient *grpcClient.GRpcClient) error {
-	// Здесь логика benchmarkMode.Run или аналогичная
-	_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(chatID), "Benchmark запущен..."))
-	// benchmarkMode.Run(...)
-	return nil
-}
-
 // --- Очистка текста для callback ---
 func sanitizeCallback(s string) string {
 	s = strings.ToLower(s)
 	s = strings.ReplaceAll(s, " ", "_")
 	re := regexp.MustCompile(`[^a-z0-9\-_]`)
 	return re.ReplaceAllString(s, "")
+}
+
+// 🧩 Заглушки под VPN-логику
+func getCurrentVPN(client *grpcClient.GRpcClient) string {
+	return "🌍 Текущий VPN: " + client.GetCurrentVPN()
+}
+
+func listAllVPNs(client *grpcClient.GRpcClient) string {
+	str, _ := client.ListVPNStatuses()
+	return str
+}
+
+func addNewVPN(client *grpcClient.GRpcClient) string {
+	str, _ := client.ListVPNStatuses()
+	return str
+}
+
+// Определяем функцию для создания клавиатуры для benchmark-режима
+func createBenchmarkKeyboard(loc *i18n.Localizer, isXrayRunning bool) [][]telego.InlineKeyboardButton {
+
+	allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
+	addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
+	currentVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "current_vpn"})
+
+	buttonText := "⏹️ Стоп"
+	buttonData := "benchmark_vpn_off"
+	if !isXrayRunning {
+		buttonText = "▶️ Старт"
+		buttonData = "benchmark_start_xray"
+	}
+
+	return [][]telego.InlineKeyboardButton{
+		{tu.InlineKeyboardButton(buttonText).WithCallbackData(buttonData)},
+		{tu.InlineKeyboardButton(allVPNs).WithCallbackData("benchmark_all_vpns")},
+		{tu.InlineKeyboardButton(currentVPN).WithCallbackData("benchmark_current_vpn")},
+		{tu.InlineKeyboardButton(addVPN).WithCallbackData("benchmark_add_vpn")},
+		{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
+		{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
+	}
+}
+
+// Определяем функцию для обработки логики fast_vpn_test
+func handleFastVPNTest(ctx *th.Context, query telego.CallbackQuery, bot *telego.Bot, allVPNs, addVPN string) error {
+	inlineKeyboard := [][]telego.InlineKeyboardButton{
+		{tu.InlineKeyboardButton("▶️ Cтарт").WithCallbackData("benchmark_start_xray")},
+	}
+
+	if benchmarkMode.IsXrayRunning() {
+		inlineKeyboard[0] = []telego.InlineKeyboardButton{tu.InlineKeyboardButton("⏹️ Стоп").WithCallbackData("benchmark_stop_xray")}
+		inlineKeyboard = append(inlineKeyboard,
+			[]telego.InlineKeyboardButton{tu.InlineKeyboardButton(allVPNs).WithCallbackData("benchmark_all_vpns")},
+			[]telego.InlineKeyboardButton{tu.InlineKeyboardButton(addVPN).WithCallbackData("benchmark_add_vpn")},
+		)
+	}
+
+	inlineKeyboard = append(inlineKeyboard,
+		[]telego.InlineKeyboardButton{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("benchmark_vpn")},
+	)
+
+	_, err := bot.SendMessage(ctx, tu.Message(
+		tu.ID(query.Message.GetChat().ID),
+		"🌐 VPN Test Меню",
+	).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
+	return err
 }
