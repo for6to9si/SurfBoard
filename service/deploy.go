@@ -98,7 +98,7 @@ func registerDeploy(
 
 }
 
-// Асинхронная установка с live логом и фильтрацией wget
+// Асинхронная установка с live логом, фильтрацией wget и кнопкой возврата
 func installReleaseLive(ctx context.Context, bot *telego.Bot, msg telego.Message, urlStr string) {
 	go func() {
 		fileName := getFileNameFromURL(urlStr)
@@ -107,12 +107,11 @@ func installReleaseLive(ctx context.Context, bot *telego.Bot, msg telego.Message
 
 		editText(bot, msg, "🚀 *Начинаю установку...*\n")
 
-		// ticker для обновления текста каждые 2 секунды
 		ticker := time.NewTicker(updateInterval)
 		defer ticker.Stop()
 		done := make(chan struct{})
 
-		// фоновая горутина для обновления текста
+		// фоновое обновление Telegram-сообщения
 		go func() {
 			for {
 				select {
@@ -128,34 +127,50 @@ func installReleaseLive(ctx context.Context, bot *telego.Bot, msg telego.Message
 		// 1️⃣ opkg update
 		logBuilder.WriteString(">>> opkg update\n")
 		if err := runAndLog(&logBuilder, false, "opkg", "update"); err != nil {
-			editText(bot, msg, fmt.Sprintf("❌ Ошибка при обновлении пакетов:\n```\n%s\n```",
-				lastLines(logBuilder.String(), 30)))
-			close(done)
+			showError(bot, msg, "Ошибка при обновлении пакетов", logBuilder.String(), done)
 			return
 		}
 
-		// 2️⃣ wget (фильтрация прогресса)
+		// 2️⃣ wget с фильтрацией вывода
 		logBuilder.WriteString(fmt.Sprintf("\n>>> wget %s\n", urlStr))
 		if err := runAndLog(&logBuilder, true, "wget", "-O", fileName, urlStr); err != nil {
-			editText(bot, msg, fmt.Sprintf("❌ Ошибка при скачивании пакета:\n```\n%s\n```",
-				lastLines(logBuilder.String(), 30)))
-			close(done)
+			showError(bot, msg, "Ошибка при скачивании пакета", logBuilder.String(), done)
 			return
 		}
 
 		// 3️⃣ opkg install
 		logBuilder.WriteString(fmt.Sprintf("\n>>> opkg install --force-downgrade %s\n", fileName))
 		if err := runAndLog(&logBuilder, false, "opkg", "install", "--force-downgrade", "./"+fileName); err != nil {
-			editText(bot, msg, fmt.Sprintf("❌ Ошибка при установке:\n```\n%s\n```",
-				lastLines(logBuilder.String(), 30)))
-			close(done)
+			showError(bot, msg, "Ошибка при установке пакета", logBuilder.String(), done)
 			return
 		}
 
+		// 4️⃣ Очистка кэша после успешной установки
+		if err := installer.ClearCache(); err != nil {
+			logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка очистки кэша: %v\n", err))
+		} else {
+			logBuilder.WriteString("\n🧹 Кэш успешно очищен\n")
+		}
+
 		close(done)
-		editText(bot, msg, fmt.Sprintf("✅ *Установка завершена!*\n\n------ Лог ------\n```\n%s\n```",
-			lastLines(logBuilder.String(), 40)))
+
+		// 5️⃣ Кнопка "Назад"
+		backBtn := tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("manage_apps")
+		inlineKb := tu.InlineKeyboard(tu.InlineKeyboardRow(backBtn))
+
+		editMessageWithKeyboard(bot, msg, fmt.Sprintf(
+			"✅ *Установка завершена!*\n\n------ Лог ------\n```\n%s\n```",
+			lastLines(logBuilder.String(), 40),
+		), *inlineKb)
 	}()
+}
+
+func showError(bot *telego.Bot, msg telego.Message, prefix, log string, done chan struct{}) {
+	close(done)
+	backBtn := tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("manage_apps")
+	inlineKb := tu.InlineKeyboard(tu.InlineKeyboardRow(backBtn))
+	editMessageWithKeyboard(bot, msg, fmt.Sprintf("❌ %s:\n```\n%s\n```",
+		prefix, lastLines(log, 30)), *inlineKb)
 }
 
 // runAndLog запускает команду и пишет её вывод в лог
@@ -172,13 +187,13 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 	for reader.Scan() {
 		line := reader.Text()
 		if filterWget {
-			// Пропускаем прогресс wget (строки с % и точками)
 			if strings.Contains(line, "%") || strings.Contains(line, "....") || strings.Contains(line, "K ") {
-				continue
+				continue // убираем мусор от wget
 			}
 		}
 		logBuilder.WriteString(line + "\n")
 	}
+
 	err := cmd.Wait()
 	if err != nil {
 		logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", name, err))
@@ -227,4 +242,17 @@ func lastLines(s string, n int) string {
 		lines = lines[len(lines)-n:]
 	}
 	return strings.Join(lines, "\n")
+}
+
+func editMessageWithKeyboard(bot *telego.Bot, msg telego.Message, text string, kb telego.InlineKeyboardMarkup) {
+	_, _ = bot.EditMessageText(
+		context.Background(),
+		&telego.EditMessageTextParams{
+			ChatID:      tu.ID(msg.GetChat().ID),
+			MessageID:   msg.GetMessageID(),
+			Text:        text,
+			ParseMode:   telego.ModeMarkdown,
+			ReplyMarkup: &kb,
+		},
+	)
 }

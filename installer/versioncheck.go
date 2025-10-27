@@ -261,7 +261,7 @@ func GetLocalVersion(commands map[string]conf.Programm) []VersionInfo {
 
 	// 3️⃣ Сохраняем в кэш
 	saveCache(results)
-	fmt.Println("💾 Кэш версий обновлён")
+	fmt.Println("💾 Кэш версий обновлён", getCacheFilePath())
 
 	return results
 
@@ -273,8 +273,22 @@ var cacheFile = filepath.Join(cacheDir, "version_cache.json")
 
 //const cacheTTL = 15 * time.Minute
 
+// getCacheFilePath возвращает полный путь к файлу кэша
+func getCacheFilePath() string {
+	cfg := conf.GetConfig()
+	cacheDir := cfg.CachePath
+	if cacheDir == "" {
+		cacheDir = os.TempDir()
+	}
+
+	// создаём каталог, если его нет
+	_ = os.MkdirAll(cacheDir, 0o755)
+	return fmt.Sprintf("%s/version_cache.json", strings.TrimRight(cacheDir, "/"))
+}
+
 // saveCache сохраняет срез VersionInfo в файл
 func saveCache(data []VersionInfo) {
+	cacheFile := getCacheFilePath()
 	file, err := os.Create(cacheFile)
 	if err != nil {
 		fmt.Println("⚠️ Ошибка записи кэша:", err)
@@ -284,17 +298,21 @@ func saveCache(data []VersionInfo) {
 
 	enc := json.NewEncoder(file)
 	enc.SetIndent("", "  ")
-	_ = enc.Encode(struct {
+	err = enc.Encode(struct {
 		Timestamp time.Time     `json:"timestamp"`
 		Data      []VersionInfo `json:"data"`
 	}{
 		Timestamp: time.Now(),
 		Data:      data,
 	})
+	if err != nil {
+		fmt.Println("⚠️ Ошибка сериализации кэша:", err)
+	}
 }
 
 // loadCache пытается загрузить данные из кэша, если он не устарел
 func loadCache() ([]VersionInfo, bool) {
+	cacheFile := getCacheFilePath()
 	file, err := os.Open(cacheFile)
 	if err != nil {
 		return nil, false
@@ -310,10 +328,28 @@ func loadCache() ([]VersionInfo, bool) {
 		return nil, false
 	}
 
-	// Проверяем срок годности
 	if time.Since(cached.Timestamp) > cacheTTL {
 		return nil, false
 	}
 
 	return cached.Data, true
+}
+
+// ClearCache удаляет файл кэша версий, если он существует
+func ClearCache() error {
+	cacheFile := getCacheFilePath()
+	if _, err := os.Stat(cacheFile); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println("ℹ️ Кэш уже очищен — файл не найден:", cacheFile)
+			return nil
+		}
+		return fmt.Errorf("ошибка проверки файла кэша: %w", err)
+	}
+
+	if err := os.Remove(cacheFile); err != nil {
+		return fmt.Errorf("ошибка удаления кэша: %w", err)
+	}
+
+	fmt.Println("🧹 Кэш успешно очищен:", cacheFile)
+	return nil
 }

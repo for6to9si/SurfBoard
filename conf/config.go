@@ -17,6 +17,7 @@ type Config struct {
 	TgBot             TgBot             `json:"tgBot"`
 	Github            Github            `json:"github"`
 	Installer         Installer         `json:"installer"`
+	CachePath         string            `json:"cachePath"`
 }
 type Paths struct {
 	XrayExecutable    string `json:"xrayExecutable"`

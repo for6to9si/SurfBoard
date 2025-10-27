@@ -3,6 +3,7 @@ package main
 import (
 	"SurfBoard/conf"
 	"SurfBoard/grpcClient"
+	"SurfBoard/installer"
 	"SurfBoard/locale"
 	"SurfBoard/service"
 	"context"
@@ -23,7 +24,7 @@ func getLang() string {
 }
 
 // Version specifies the current version of the application.
-var Version = "0.1.2"
+var Version = "0.1.3"
 
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
@@ -84,6 +85,12 @@ func main() {
 	}
 
 	config := conf.GetConfig()
+
+	// Пример ручной очистки кэша
+	err = installer.ClearCache()
+	if err != nil {
+		fmt.Println("Ошибка очистки:", err)
+	}
 
 	// Конфигурация для первого xray-сервера
 	xraygRpcclient, err := grpcClient.NewGRpcClient(config.XwayConf.Grpc)
