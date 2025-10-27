@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -194,15 +195,34 @@ func runCommand(ctx context.Context, app string, path string, args []string, rep
 	return info
 }
 
-// простое сравнение версий (без учёта префикса v)
+// compareVersionsNum возвращает -1, 0, +1
 func compareVersions(local, remote string) int {
-	local = strings.TrimPrefix(local, "v")
-	remote = strings.TrimPrefix(remote, "v")
+	l := convertVersionToNumber(local)
+	r := convertVersionToNumber(remote)
 
-	if local == remote {
-		return 0
+	if l < r {
+		return 1
 	}
-	return strings.Compare(local, remote)
+	if l > r {
+		return -1
+	}
+	return 0
+}
+
+// convertVersionToNumber преобразует строку "1.12.10" → 1012010
+// Работает корректно с префиксом "v" и отсутствующими частями.
+func convertVersionToNumber(ver string) int64 {
+	ver = strings.TrimPrefix(ver, "v")
+	parts := strings.Split(ver, ".")
+
+	var nums [3]int64
+	for i := 0; i < len(parts) && i < 3; i++ {
+		n, _ := strconv.ParseInt(parts[i], 10, 64)
+		nums[i] = n
+	}
+
+	// 1.12.10 → 1*1_000_000 + 12*1_000 + 10 = 1012010
+	return nums[0]*1_000_000 + nums[1]*1_000 + nums[2]
 }
 
 func GetLocalVersion(commands map[string]conf.Programm) []VersionInfo {
