@@ -3,14 +3,14 @@ package service
 import (
 	"SurfBoard/conf"
 	"SurfBoard/installer"
-	"bytes"
+	"bufio"
+	"context"
 	"fmt"
+	"io"
 	"log"
-	"net/url"
-	"os"
 	"os/exec"
-	"path"
 	"strings"
+	"time"
 
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
@@ -80,82 +80,151 @@ func registerDeploy(
 		backBtn := tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("program_" + sanitizeCallback(appName))
 		rows = append(rows, tu.InlineKeyboardRow(backBtn))
 
-		msg := "📦 Installing:\n"
-
-		msg += installRelease(selected.BrowserDownloadURL)
-
-		// Редактируем сообщение безопасно
-		_, err := ctx.Bot().EditMessageText(ctx, &telego.EditMessageTextParams{
-			ChatID:      tu.ID(cq.Message.GetChat().ID),
-			MessageID:   cq.Message.GetMessageID(),
-			Text:        msg,
-			ParseMode:   telego.ModeMarkdown,
-			ReplyMarkup: tu.InlineKeyboard(rows...),
-		})
-		// Отвечаем на callback, чтобы убрать "часики"
+		// Сразу отвечаем на callback (чтобы Telegram не выдал timeout)
 		_ = ctx.Bot().AnswerCallbackQuery(ctx, &telego.AnswerCallbackQueryParams{
 			CallbackQueryID: cq.ID,
 		})
-		return err
+
+		// Отправляем сообщение о начале установки
+		sent, _ := ctx.Bot().SendMessage(ctx, &telego.SendMessageParams{
+			ChatID: tu.ID(cq.Message.GetChat().ID),
+			Text:   "🚀 Подготовка к установке...",
+		})
+
+		// Запускаем установку в фоне с потоковым логом
+		installReleaseLive(ctx, ctx.Bot(), *sent, selected.BrowserDownloadURL)
+		return nil
 	}, th.CallbackDataPrefix("deploy_"))
 
 }
 
-func installRelease(urlStr string) string {
+// Асинхронная установка с live логом и фильтрацией wget
+func installReleaseLive(ctx context.Context, bot *telego.Bot, msg telego.Message, urlStr string) {
+	go func() {
+		fileName := getFileNameFromURL(urlStr)
+		var logBuilder strings.Builder
+		updateInterval := time.Second * 2
 
-	// Получаем имя файла из URL
-	fileName, err := getFileNameFromURL(urlStr)
-	if err != nil {
-		return fmt.Sprintf("Ошибка при получении имени файла: %v", err)
-	}
+		editText(bot, msg, "🚀 *Начинаю установку...*\n")
 
-	var fullLog bytes.Buffer
+		// ticker для обновления текста каждые 2 секунды
+		ticker := time.NewTicker(updateInterval)
+		defer ticker.Stop()
+		done := make(chan struct{})
 
-	fullLog.WriteString(fmt.Sprintf(">>> Обновление списка пакетов..."))
-	if out, err := runCommand("opkg", "update"); err != nil {
-		return fmt.Sprintf("Ошибка при обновлении пакетов: %v\n%s", err, out)
-	} else {
-		fullLog.WriteString(out)
-	}
+		// фоновая горутина для обновления текста
+		go func() {
+			for {
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+					editText(bot, msg, fmt.Sprintf("📦 Установка...\n```\n%s\n```",
+						lastLines(logBuilder.String(), 25)))
+				}
+			}
+		}()
 
-	fullLog.WriteString(fmt.Sprintf(">>> Скачивание пакета:", urlStr))
-	if out, err := runCommand("wget", "-O", fileName, urlStr); err != nil {
-		return fmt.Sprintf("Ошибка при скачивании файла: %v\n%s", err, out)
-	} else {
-		fullLog.WriteString(out)
-	}
+		// 1️⃣ opkg update
+		logBuilder.WriteString(">>> opkg update\n")
+		if err := runAndLog(&logBuilder, false, "opkg", "update"); err != nil {
+			editText(bot, msg, fmt.Sprintf("❌ Ошибка при обновлении пакетов:\n```\n%s\n```",
+				lastLines(logBuilder.String(), 30)))
+			close(done)
+			return
+		}
 
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		return fmt.Sprintf("Файл %s не найден после скачивания", fileName)
-	}
+		// 2️⃣ wget (фильтрация прогресса)
+		logBuilder.WriteString(fmt.Sprintf("\n>>> wget %s\n", urlStr))
+		if err := runAndLog(&logBuilder, true, "wget", "-O", fileName, urlStr); err != nil {
+			editText(bot, msg, fmt.Sprintf("❌ Ошибка при скачивании пакета:\n```\n%s\n```",
+				lastLines(logBuilder.String(), 30)))
+			close(done)
+			return
+		}
 
-	fullLog.WriteString(fmt.Sprintf(">>> Установка пакета..."))
-	if out, err := runCommand("opkg", "install", "--force-downgrade", "./"+fileName); err != nil {
-		return fmt.Sprintf("Ошибка при установке пакета: %v\n%s", err, out)
-	} else {
-		fullLog.WriteString(out)
-	}
+		// 3️⃣ opkg install
+		logBuilder.WriteString(fmt.Sprintf("\n>>> opkg install --force-downgrade %s\n", fileName))
+		if err := runAndLog(&logBuilder, false, "opkg", "install", "--force-downgrade", "./"+fileName); err != nil {
+			editText(bot, msg, fmt.Sprintf("❌ Ошибка при установке:\n```\n%s\n```",
+				lastLines(logBuilder.String(), 30)))
+			close(done)
+			return
+		}
 
-	fullLog.WriteString("✅ Установка завершена успешно!")
-	fullLog.WriteString("------ Полный лог выполнения ------")
-	return fullLog.String()
+		close(done)
+		editText(bot, msg, fmt.Sprintf("✅ *Установка завершена!*\n\n------ Лог ------\n```\n%s\n```",
+			lastLines(logBuilder.String(), 40)))
+	}()
 }
 
-// runCommand выполняет команду и возвращает её вывод (stdout + stderr)
-func runCommand(name string, args ...string) (string, error) {
+// runAndLog запускает команду и пишет её вывод в лог
+// Если filterWget == true — убирает лишние строки из wget
+func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args ...string) error {
 	cmd := exec.Command(name, args...)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	err := cmd.Run()
-	return out.String(), err
+	stdout, _ := cmd.StdoutPipe()
+	stderr, _ := cmd.StderrPipe()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	reader := bufio.NewScanner(io.MultiReader(stdout, stderr))
+	for reader.Scan() {
+		line := reader.Text()
+		if filterWget {
+			// Пропускаем прогресс wget (строки с % и точками)
+			if strings.Contains(line, "%") || strings.Contains(line, "....") || strings.Contains(line, "K ") {
+				continue
+			}
+		}
+		logBuilder.WriteString(line + "\n")
+	}
+	err := cmd.Wait()
+	if err != nil {
+		logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", name, err))
+	}
+	return err
 }
 
-// getFileNameFromURL — извлекает имя файла из URL
-func getFileNameFromURL(rawURL string) (string, error) {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return "", err
+// ioMulti объединяет несколько io.Reader
+func ioMulti(readers ...io.Reader) io.Reader {
+	r, w := io.Pipe()
+	go func() {
+		for _, rd := range readers {
+			sc := bufio.NewScanner(rd)
+			for sc.Scan() {
+				fmt.Fprintln(w, sc.Text())
+			}
+		}
+		w.Close()
+	}()
+	return r
+}
+
+// getFileNameFromURL извлекает имя файла из URL
+func getFileNameFromURL(url string) string {
+	parts := strings.Split(url, "/")
+	return parts[len(parts)-1]
+}
+
+// editText безопасно обновляет сообщение
+func editText(bot *telego.Bot, msg telego.Message, text string) {
+	_, _ = bot.EditMessageText(
+		context.Background(),
+		&telego.EditMessageTextParams{
+			ChatID:    tu.ID(msg.GetChat().ID),
+			MessageID: msg.GetMessageID(),
+			Text:      text,
+			ParseMode: telego.ModeMarkdown,
+		},
+	)
+}
+
+// lastLines возвращает последние n строк из лога
+func lastLines(s string, n int) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
 	}
-	return path.Base(u.Path), nil
+	return strings.Join(lines, "\n")
 }
