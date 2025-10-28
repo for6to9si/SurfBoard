@@ -31,6 +31,7 @@ type GitHubRelease struct {
 type RepoConfig struct {
 	Repo         string
 	ArchPatterns map[string]*regexp.Regexp
+	OnlyRelease  bool
 }
 
 type repoJSON struct {
@@ -47,7 +48,7 @@ type AppLinkButton struct {
 // ---------- Константы ----------
 
 const cacheDir = ".cache"
-const cacheTTL = 10 * time.Minute
+const cacheTTL = 5 * time.Minute
 
 // ---------- Загрузка конфигурации ----------
 
@@ -67,6 +68,7 @@ func LoadRepoConfigs(install conf.Installer) ([]RepoConfig, error) {
 		cfg := RepoConfig{
 			Repo:         r.Repo,
 			ArchPatterns: compiled,
+			OnlyRelease:  r.OnlyRelease,
 		}
 
 		configs = append(configs, cfg)
@@ -157,14 +159,23 @@ func fetchLatestForRepo(cfg RepoConfig, maxPerArch int) []AppLinkButton {
 
 	fmt.Println("Architecture:", runtime.GOARCH)
 	fmt.Println("Operating System:", runtime.GOOS)
-	getArch()
+	getArch() // удалить после проверки на роутере с архитектурой ARM
 
+	//arch := runtime.GOARCH
 	arch := "mipsle"
-	re := cfg.ArchPatterns[arch]
+	re, ok := cfg.ArchPatterns[arch]
+	if !ok {
+		fmt.Printf("⚠️ Архитектура %q не поддерживается (в cfg.ArchPatterns отсутствует)\n", arch)
+		sb = append(sb, AppLinkButton{
+			BrowserDownloadURL: "https://github.com/",
+			Version:            fmt.Sprintf("%q см. config.json ⚠️", arch),
+		})
+		return sb
+	}
 
 	for _, release := range releases {
 
-		if release.Prerelease {
+		if release.Prerelease && cfg.OnlyRelease {
 			continue
 		}
 

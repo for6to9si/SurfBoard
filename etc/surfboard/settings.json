@@ -110,6 +110,8 @@
                   "mipsle": "(?i)(mips32le|mipsle).*?\\.(ipk|tar\\.gz)$",
                   "mips": "(?i)mips(32|64)\\.(?:.*\\.)?(?:ipk|tar\\.gz)$"
                 },
+                "only_release": true,
+                "restart_command": "/opt/etc/init.d/S98xray restart",
                 "isEnabled": true
             },
             "sing-box":
@@ -124,6 +126,8 @@
                   "mipsle": "(?i)(mipsel|mipsle).*?\\.(ipk|tar\\.gz)$",
                   "mips": "(?i)(^|[-_.])mips([-_.]|$).*?\\.(ipk|tar\\.gz)$"
                 },
+                "only_release": true,
+                "restart_command": "/opt/etc/init.d/S99sing-box restart",
                 "isEnabled": true
             },
             "surfBoard":
@@ -138,7 +142,9 @@
                   "mipsle": "(?i)(mipsel|mipsle).*?\\.(ipk|tar\\.gz)$",
                   "mips": "(?i)mips\\.(?:.*\\.)?(?:ipk|tar\\.gz)$"
                 },
-                "isEnabled": true
+                "isEnabled": true,
+                "restart_command": "/opt/etc/init.d/S99surfboard restart",
+                "only_release": true
             },
             "youtubeUnblock":
             {
@@ -150,6 +156,8 @@
                   "mipsle": "(?i)(entware.*(mipsel|mipsle)).*?\\.(ipk|tar\\.gz)$",
                   "mips": "(?i)entware.*\\bmips\\b.*?\\.(ipk|tar\\.gz)$"
                 },
+                "only_release": true,
+                "restart_command": "/opt/etc/init.d/S91youtubeUnblock restart",
                 "isEnabled": true
             },
             "nfqws":
@@ -161,6 +169,7 @@
                   "mipsle": "(?i)(mipsel|mipsle).*?\\.(ipk|tar\\.gz)$",
                   "mips": "(?i)(^|[-_.])mips([-_.]|$).*?\\.(ipk|tar\\.gz)$"
                 },
+                "only_release": true,
                 "isEnabled": false
             }
         }

@@ -92,14 +92,14 @@ func registerDeploy(
 		})
 
 		// Запускаем установку в фоне с потоковым логом
-		installReleaseLive(ctx, ctx.Bot(), *sent, selected.BrowserDownloadURL)
+		installReleaseLive(ctx.Bot(), cfg, *sent, selected.BrowserDownloadURL)
 		return nil
 	}, th.CallbackDataPrefix("deploy_"))
 
 }
 
 // Асинхронная установка с live логом, фильтрацией wget и кнопкой возврата
-func installReleaseLive(ctx context.Context, bot *telego.Bot, msg telego.Message, urlStr string) {
+func installReleaseLive(bot *telego.Bot, cfg *conf.Programm, msg telego.Message, urlStr string) {
 	go func() {
 		fileName := getFileNameFromURL(urlStr)
 		var logBuilder strings.Builder
@@ -152,9 +152,16 @@ func installReleaseLive(ctx context.Context, bot *telego.Bot, msg telego.Message
 			logBuilder.WriteString("\n🧹 Кэш успешно очищен\n")
 		}
 
+		// 5️⃣ restart program
+		logBuilder.WriteString(fmt.Sprintf("\n>>> %s\n", cfg.RestartCommand))
+		if err := runAndLog(&logBuilder, false, cfg.RestartCommand); err != nil {
+			showError(bot, msg, "Ошибка при перезапуске программы", logBuilder.String(), done)
+			return
+		}
+
 		close(done)
 
-		// 5️⃣ Кнопка "Назад"
+		// 6️⃣ Кнопка "Назад"
 		backBtn := tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("manage_apps")
 		inlineKb := tu.InlineKeyboard(tu.InlineKeyboardRow(backBtn))
 
