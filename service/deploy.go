@@ -153,10 +153,14 @@ func installReleaseLive(bot *telego.Bot, cfg *conf.Programm, msg telego.Message,
 		}
 
 		// 5️⃣ restart program
-		logBuilder.WriteString(fmt.Sprintf("\n>>> %s\n", cfg.RestartCommand))
-		if err := runAndLog(&logBuilder, false, cfg.RestartCommand); err != nil {
-			showError(bot, msg, "Ошибка при перезапуске программы", logBuilder.String(), done)
-			return
+		if cfg.RestartCommand != "" {
+			logBuilder.WriteString(fmt.Sprintf("\n>>> %s\n", cfg.RestartCommand))
+			if err := runAndLog(&logBuilder, false, cfg.RestartCommand); err != nil {
+				showError(bot, msg, "Ошибка при перезапуске программы", logBuilder.String(), done)
+				return
+			}
+		} else {
+			logBuilder.WriteString(fmt.Sprintf("\n>>> Строка запуска для программы %s не задана %s\n", fileName))
 		}
 
 		close(done)
