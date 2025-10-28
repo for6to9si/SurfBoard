@@ -2,6 +2,7 @@ package installer
 
 import (
 	"SurfBoard/conf"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -153,10 +155,19 @@ func fetchLatestForRepo(cfg RepoConfig, maxPerArch int) []AppLinkButton {
 
 	var sb []AppLinkButton
 
+	fmt.Println("Architecture:", runtime.GOARCH)
+	fmt.Println("Operating System:", runtime.GOOS)
+	getArch()
+
 	arch := "mipsle"
 	re := cfg.ArchPatterns[arch]
 
 	for _, release := range releases {
+
+		if release.Prerelease {
+			continue
+		}
+
 		for _, asset := range release.Assets {
 			name := asset.Name
 			if !strings.HasSuffix(name, ".ipk") && !strings.HasSuffix(name, ".tar.gz") {
@@ -232,4 +243,46 @@ func RepoConfigs(install conf.Installer, repoName string) []AppLinkButton {
 	}
 
 	return fetchLatestForRepo(cfg, 3)
+}
+
+func getArch() {
+	arch := runtime.GOARCH
+	fmt.Println("GOARCH:", arch)
+	fmt.Println("OS:", runtime.GOOS)
+
+	// Определяем разрядность
+	bits := archBits(arch)
+	fmt.Printf("Bitness: %d-bit\n", bits)
+
+	// Определяем порядок байт (энднность)
+	endianness := detectEndianness(arch)
+	fmt.Println("Endianness:", endianness)
+}
+
+// Определяет 32 или 64 бит по названию архитектуры
+func archBits(arch string) int {
+	if strings.Contains(arch, "64") {
+		return 64
+	}
+	return 32
+}
+
+// Определяет порядок байт
+func detectEndianness(arch string) string {
+	// Если архитектура явно указывает "le"
+	if strings.HasSuffix(arch, "le") {
+		return "Little Endian"
+	}
+	if strings.HasSuffix(arch, "be") {
+		return "Big Endian"
+	}
+
+	// Иначе пытаемся определить в рантайме
+	var x uint16 = 0xABCD
+	b := [2]byte{}
+	binary.LittleEndian.PutUint16(b[:], x)
+	if b[0] == 0xCD {
+		return "Little Endian"
+	}
+	return "Big Endian"
 }
