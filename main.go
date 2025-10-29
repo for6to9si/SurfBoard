@@ -1,6 +1,7 @@
 package main
 
 import (
+	"SurfBoard/benchmarkMode"
 	"SurfBoard/conf"
 	"SurfBoard/grpcClient"
 	"SurfBoard/installer"
@@ -24,7 +25,7 @@ func getLang() string {
 }
 
 // Version specifies the current version of the application.
-var Version = "1.0.2"
+var Version = "1.0.3"
 
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
@@ -118,7 +119,8 @@ func main() {
 		}
 	}()
 
-	// ✅ Запуск Telegram-бота в отдельном пакете
+	benchmarkMode.Init(config.BenchmarkSettings)
+
 	ctx := context.Background()
 	service.RunTgBot(ctx, &config, xraygRpcclient, benchmarkclient)
 }
