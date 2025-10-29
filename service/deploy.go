@@ -203,19 +203,19 @@ func showError(bot *telego.Bot, msg telego.Message, prefix, log string, done cha
 // Если выполняется самоустановка SurfBoard — команда запускается во внешнем процессе.
 func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args ...string) error {
 	fullCmd := fmt.Sprintf("%s %s", name, strings.Join(args, " "))
-	logBuilder.WriteString(fmt.Sprintf("\n>>> %s\n", fullCmd))
+	fmt.Sprintf("\n>>> %s\n", fullCmd)
 
 	// 🧩 Проверяем, обновляется ли SurfBoard через opkg
 	if strings.Contains(fullCmd, "opkg install") && strings.Contains(fullCmd, "surfboard") {
-		logBuilder.WriteString("\n⚙️ Обнаружено обновление самой программы SurfBoard\n")
-		logBuilder.WriteString("🚀 Запуск внешнего процесса для безопасного обновления...\n")
+		fmt.Sprintf("\n⚙️ Обнаружено обновление самой программы SurfBoard\n")
+		fmt.Sprintf("🚀 Запуск внешнего процесса для безопасного обновления...\n")
 
 		go func(cmd string) {
 			time.Sleep(2 * time.Second) // Подождать, чтобы бот успел ответить
 			_ = exec.Command("sh", "-c", cmd+" && /opt/etc/init.d/S99surfboard restart").Run()
 		}(fullCmd)
 
-		logBuilder.WriteString("\n♻️ Приложение сейчас завершится для обновления...\n")
+		fmt.Sprintf("\n♻️ Приложение сейчас завершится для обновления...\n")
 		go func() {
 			time.Sleep(3 * time.Second)
 			os.Exit(0)

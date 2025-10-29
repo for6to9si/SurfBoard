@@ -39,9 +39,13 @@ is_running() {
 
 case "$1" in
     start)
-        echo "Starting $PROCS..."
-        echo "=== $(date) === surfboard client info ===" >>"$LOG_FILE"
-        $PROCS -c "$CONF" >>"$LOG_FILE" 2>&1 &
+        if is_running; then
+            echo "$PROCS is running"
+        else
+            echo "Starting $PROCS..."
+            echo "=== $(date) === surfboard client info ===" >>"$LOG_FILE"
+            $PROCS -c "$CONF" >>"$LOG_FILE" 2>&1 &
+        fi
         ;;
     stop)
         echo "Stopping $PROCS..."
