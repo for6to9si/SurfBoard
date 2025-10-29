@@ -210,7 +210,7 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 		logBuilder.WriteString("🚀 Запуск внешнего процесса для безопасного обновления...\n")
 
 		go func(cmd string) {
-			time.Sleep(1 * time.Second) // чуть подождать, чтобы Telegram успел отправить ответ
+			time.Sleep(10 * time.Second) // чуть подождать, чтобы Telegram успел отправить ответ
 			exec.Command("sh", "-c", cmd+" && /opt/etc/init.d/S99surfboard restart").Run()
 		}(fullCmd)
 
