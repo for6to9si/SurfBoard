@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -198,32 +197,9 @@ func showError(bot *telego.Bot, msg telego.Message, prefix, log string, done cha
 		prefix, lastLines(log, 30)), *inlineKb)
 }
 
-// runAndLog запускает команду и пишет её вывод в лог.
-// Если filterWget == true — убирает лишние строки из wget.
-// Если выполняется самоустановка SurfBoard — команда запускается во внешнем процессе.
+// runAndLog запускает команду и пишет её вывод в лог
+// Если filterWget == true — убирает лишние строки из wget
 func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args ...string) error {
-	fullCmd := fmt.Sprintf("%s %s", name, strings.Join(args, " "))
-	fmt.Sprintf("\n>>> %s\n", fullCmd)
-
-	// 🧩 Проверяем, обновляется ли SurfBoard через opkg
-	if strings.Contains(fullCmd, "opkg install") && strings.Contains(fullCmd, "surfboard") {
-		fmt.Sprintf("\n⚙️ Обнаружено обновление самой программы SurfBoard\n")
-		fmt.Sprintf("🚀 Запуск внешнего процесса для безопасного обновления...\n")
-
-		go func(cmd string) {
-			time.Sleep(2 * time.Second) // Подождать, чтобы бот успел ответить
-			_ = exec.Command("sh", "-c", cmd+" && /opt/etc/init.d/S99surfboard restart").Run()
-		}(fullCmd)
-
-		fmt.Sprintf("\n♻️ Приложение сейчас завершится для обновления...\n")
-		go func() {
-			time.Sleep(3 * time.Second)
-			os.Exit(0)
-		}()
-		return nil
-	}
-
-	// 🧰 Обычное выполнение команды
 	cmd := exec.Command(name, args...)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
