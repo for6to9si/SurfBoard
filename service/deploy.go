@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -197,9 +198,31 @@ func showError(bot *telego.Bot, msg telego.Message, prefix, log string, done cha
 		prefix, lastLines(log, 30)), *inlineKb)
 }
 
-// runAndLog запускает команду и пишет её вывод в лог
-// Если filterWget == true — убирает лишние строки из wget
+// runAndLog запускает команду и пишет её вывод в лог.
+// Если filterWget == true — убирает лишние строки из wget.
+// Если выполняется самоустановка SurfBoard — команда запускается во внешнем процессе.
 func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args ...string) error {
+	fullCmd := fmt.Sprintf("%s %s", name, strings.Join(args, " "))
+
+	// 🧩 Обнаружение самоустановки SurfBoard
+	if strings.Contains(fullCmd, "opkg install") && strings.Contains(fullCmd, "surfboard") {
+		logBuilder.WriteString("\n⚙️ Обнаружено обновление самой программы SurfBoard\n")
+		logBuilder.WriteString("🚀 Запуск внешнего процесса для безопасного обновления...\n")
+
+		go func(cmd string) {
+			time.Sleep(1 * time.Second) // чуть подождать, чтобы Telegram успел отправить ответ
+			exec.Command("sh", "-c", cmd+" && /opt/etc/init.d/S99surfboard restart").Run()
+		}(fullCmd)
+
+		logBuilder.WriteString("\n♻️ Приложение сейчас завершится для обновления...\n")
+		go func() {
+			time.Sleep(1500 * time.Millisecond)
+			os.Exit(0)
+		}()
+		return nil
+	}
+
+	// 🧰 Обычное выполнение команды
 	cmd := exec.Command(name, args...)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
