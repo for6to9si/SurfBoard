@@ -210,7 +210,7 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 
 		script := `/tmp/restart_surfboard.sh`
 		restartScript := `#!/bin/sh
-sleep 15
+sleep 45
 /opt/etc/init.d/S99surfboard start
 rm -f ` + script + `
 `
@@ -221,8 +221,9 @@ rm -f ` + script + `
 		// Запускаем его асинхронно
 		_ = exec.Command("sh", "-c", "sh "+script+" &").Start()
 
-		logBuilder.WriteString("🚀 Перезапуск SurfBoard будет выполнен через 3 секунды...\n")
+		logBuilder.WriteString("🚀 Перезапуск SurfBoard будет выполнен через 45 секунды...\n")
 		logBuilder.WriteString("♻️ Текущий процесс завершится для обновления\n")
+		logBuilder.WriteString("🎯 Для повторного запуска сервиса воспользуйтесь командой /start")
 
 	}
 
