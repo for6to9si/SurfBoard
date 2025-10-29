@@ -25,7 +25,7 @@ func getLang() string {
 }
 
 // Version specifies the current version of the application.
-var Version = "1.0.17"
+var Version = "1.0.18"
 
 func main() {
 	locale.InitI18n() // 📌 Инициализация i18n
