@@ -101,22 +101,6 @@ jobs:
           Maintainer: for6to9si <for6to9si@gmail.com>
           EOF
 
-      - name: Add postinst script
-        if: matrix.target.arch != 'amd64'
-        run: |
-          cat > surfboard-${{ matrix.target.arch }}/CONTROL/postinst <<'EOF'
-          #!/bin/sh
-          case "$1" in
-           configure)        
-               # Запуск Surfboard после установки
-               if [ -x /opt/etc/init.d/S99surfboard ]; then
-                   /opt/etc/init.d/S99surfboard start >/dev/null 2>&1 || true
-               fi
-           ;;
-          esac
-          exit 0
-          EOF
-          chmod 755 surfboard-${{ matrix.target.arch }}/CONTROL/postinst
 
       - name: Package IPK
         if: matrix.target.arch != 'amd64'

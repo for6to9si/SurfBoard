@@ -208,20 +208,29 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 	if strings.Contains(fullCmd, "opkg install") && strings.Contains(fullCmd, "surfboard") {
 		logBuilder.WriteString("\n⚙️ Обнаружено обновление самой программы SurfBoard\n")
 
-		script := `/tmp/restart_surfboard.sh`
-		restartScript := `#!/bin/sh
+		script1 := `/tmp/restart_surfboard.sh`
+		script2 := `/tmp/restart_surfboard_fallback.sh`
+
+		restartScript1 := `#!/bin/sh
 sleep 45
 /opt/etc/init.d/S99surfboard start
-rm -f ` + script + `
+rm -f ` + script1 + `
+`
+		restartScript2 := `#!/bin/sh
+sleep 90
+/opt/etc/init.d/S99surfboard start
+rm -f ` + script2 + `
 `
 
 		// Записываем скрипт на диск
-		_ = os.WriteFile(script, []byte(restartScript), 0755)
+		_ = os.WriteFile(script1, []byte(restartScript1), 0755)
+		_ = os.WriteFile(script2, []byte(restartScript2), 0755)
 
 		// Запускаем его асинхронно
-		_ = exec.Command("sh", "-c", "sh "+script+" &").Start()
+		_ = exec.Command("sh", "-c", "sh "+script1+" &").Start()
+		_ = exec.Command("sh", "-c", "sh "+script2+" &").Start()
 
-		logBuilder.WriteString("🚀 Перезапуск SurfBoard будет выполнен через 45 секунды...\n")
+		logBuilder.WriteString("🚀 Перезапуск SurfBoard будет выполнен через 45 и 90 секунд...\n")
 		logBuilder.WriteString("♻️ Текущий процесс завершится для обновления\n")
 		logBuilder.WriteString("🎯 Для повторного запуска сервиса воспользуйтесь командой /start")
 
