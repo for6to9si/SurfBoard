@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -200,6 +201,31 @@ func showError(bot *telego.Bot, msg telego.Message, prefix, log string, done cha
 // runAndLog запускает команду и пишет её вывод в лог
 // Если filterWget == true — убирает лишние строки из wget
 func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args ...string) error {
+
+	fullCmd := fmt.Sprintf("%s %s", name, strings.Join(args, " "))
+
+	// 🧩 Проверяем, обновляется ли SurfBoard через opkg
+	if strings.Contains(fullCmd, "opkg install") && strings.Contains(fullCmd, "surfboard") {
+		logBuilder.WriteString("\n⚙️ Обнаружено обновление самой программы SurfBoard\n")
+
+		script := `/tmp/restart_surfboard.sh`
+		restartScript := `#!/bin/sh
+sleep 15
+/opt/etc/init.d/S99surfboard start
+rm -f ` + script + `
+`
+
+		// Записываем скрипт на диск
+		_ = os.WriteFile(script, []byte(restartScript), 0755)
+
+		// Запускаем его асинхронно
+		_ = exec.Command("sh", "-c", "sh "+script+" &").Start()
+
+		logBuilder.WriteString("🚀 Перезапуск SurfBoard будет выполнен через 3 секунды...\n")
+		logBuilder.WriteString("♻️ Текущий процесс завершится для обновления\n")
+
+	}
+
 	cmd := exec.Command(name, args...)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
