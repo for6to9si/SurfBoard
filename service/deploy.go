@@ -211,17 +211,20 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 		script1 := `/tmp/restart_surfboard.sh`
 		script2 := `/tmp/restart_surfboard_fallback.sh`
 
-		restartScript1 := fmt.Sprintf(`#!/bin/sh
-		sleep 45
-		/opt/etc/init.d/S99surfboard start
-		rm -f %s
-		`, script1)
+		restartScript1 := strings.Join([]string{
+			"#!/bin/sh",
+			"sleep 45",
+			"/opt/etc/init.d/S99surfboard start",
+			"rm -f " + script1,
+			"", // добавляем перевод строки в конце
+		}, "\n")
 
 		restartScript2 := strings.Join([]string{
 			"#!/bin/sh",
 			"sleep 90",
 			"/opt/etc/init.d/S99surfboard start",
 			"rm -f " + script2,
+			"", // добавляет \n в конце
 		}, "\n")
 
 		// Записываем скрипт на диск
