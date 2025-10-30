@@ -3,6 +3,7 @@ module SurfBoard
 go 1.24.3
 
 require (
+	github.com/creack/pty v1.1.24
 	github.com/for6to9si/vpnparser v1.4.0
 	github.com/mymmrac/telego v1.2.0
 	github.com/nicksnyder/go-i18n/v2 v2.6.0

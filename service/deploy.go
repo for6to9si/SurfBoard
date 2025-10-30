@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/creack/pty"
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
@@ -169,7 +170,7 @@ func installReleaseLive(bot *telego.Bot, cfg *conf.Programm, msg telego.Message,
 			}
 
 			// Немного подождать, чтобы успел появиться вывод
-			time.Sleep(10 * time.Second)
+			time.Sleep(2 * time.Second)
 
 			logBuilder.WriteString("\n🔁 Программа успешно перезапущена\n")
 
@@ -201,7 +202,6 @@ func showError(bot *telego.Bot, msg telego.Message, prefix, log string, done cha
 // runAndLog запускает команду и пишет её вывод в лог
 // Если filterWget == true — убирает лишние строки из wget
 func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args ...string) error {
-
 	fullCmd := fmt.Sprintf("%s %s", name, strings.Join(args, " "))
 
 	// 🧩 Проверяем, обновляется ли SurfBoard через opkg
@@ -237,30 +237,34 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 
 		logBuilder.WriteString("🚀 Перезапуск SurfBoard будет выполнен через 45 и 90 секунд...\n")
 		logBuilder.WriteString("♻️ Текущий процесс завершится для обновления\n")
-		logBuilder.WriteString("🎯 Для повторного запуска сервиса воспользуйтесь командой /start")
-
+		logBuilder.WriteString("🎯 Для повторного запуска сервиса воспользуйтесь командой /start\n")
 	}
 
+	// 🧰 Основная часть — запуск команды в PTY
 	cmd := exec.Command(name, args...)
-	stdout, _ := cmd.StdoutPipe()
-	stderr, _ := cmd.StderrPipe()
-	if err := cmd.Start(); err != nil {
+
+	// создаём псевдо-терминал
+	ptmx, err := pty.Start(cmd)
+	if err != nil {
+		logBuilder.WriteString(fmt.Sprintf("⚠️ Не удалось создать PTY: %v\n", err))
 		return err
 	}
+	defer func() { _ = ptmx.Close() }()
 
-	reader := bufio.NewScanner(io.MultiReader(stdout, stderr))
+	// читаем stdout + stderr через pty
+	reader := bufio.NewScanner(ptmx)
 	for reader.Scan() {
 		line := reader.Text()
 		if filterWget {
-			// фильтруем шум wget
 			if strings.Contains(line, "%") || strings.Contains(line, "....") || strings.Contains(line, "K ") {
-				continue
+				continue // фильтруем шум wget
 			}
 		}
 		logBuilder.WriteString(line + "\n")
 	}
 
-	err := cmd.Wait()
+	// ждём завершения
+	err = cmd.Wait()
 	if err != nil {
 		logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", name, err))
 	}
