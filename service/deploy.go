@@ -294,7 +294,7 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 	// Закрыть pty в конце
 	defer func() {
 		// ⏳ Ждём, чтобы дочерний процесс успел инициализироваться
-		time.Sleep(10 * time.Second)
+		time.Sleep(15 * time.Second)
 		_ = ptmx.Close()
 	}()
 
@@ -308,6 +308,11 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 			}
 		}
 		logBuilder.WriteString(line + "\n")
+	}
+
+	// читаем возможный хвост ошибок
+	if err := scanner.Err(); err != nil && err != io.EOF {
+		logBuilder.WriteString(fmt.Sprintf("⚠️ Ошибка чтения PTY: %v\n", err))
 	}
 
 	if err := cmd.Wait(); err != nil {
