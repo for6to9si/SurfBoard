@@ -292,9 +292,12 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 	}
 
 	// Закрыть pty в конце
-	//defer func() {
-	//	_ = ptmx.Close()
-	//}()
+	defer func() {
+		logBuilder.WriteString("⏳ Ждём 10 минут перед закрытием PTY...\n")
+		time.Sleep(10 * time.Minute)
+		logBuilder.WriteString("Закрытие PTY...\n")
+		_ = ptmx.Close()
+	}()
 
 	// Чтение из PTY
 	scanner := bufio.NewScanner(ptmx)
