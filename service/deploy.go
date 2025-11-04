@@ -292,7 +292,11 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 	}
 
 	// Закрыть pty в конце
-	defer func() { _ = ptmx.Close() }()
+	defer func() {
+		// ⏳ Ждём, чтобы дочерний процесс успел инициализироваться
+		time.Sleep(10 * time.Second)
+		_ = ptmx.Close()
+	}()
 
 	// Чтение из PTY
 	scanner := bufio.NewScanner(ptmx)
@@ -305,9 +309,6 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 		}
 		logBuilder.WriteString(line + "\n")
 	}
-
-	// ⏳ Ждём, чтобы дочерний процесс успел инициализироваться
-	time.Sleep(10 * time.Second)
 
 	if err := cmd.Wait(); err != nil {
 		logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", fullCmd, err))
