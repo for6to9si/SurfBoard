@@ -260,9 +260,23 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 
 	//Использовать “двойной fork” через shell
 	if strings.Contains(fullCmd, "S98xray") {
-		logBuilder.WriteString("🧩 Обнаружен запуск xray — запускаем через двойной fork (&)\n")
-		fullCmd = "(" + fullCmd + ") >/dev/null 2>&1 &"
+		logBuilder.WriteString("🧩 Обнаружен xray — выполняю без PTY, чтобы избежать SIGHUP\n")
 		cmd = exec.Command("sh", "-c", fullCmd)
+		cmd.Dir = workDir
+		stdout, _ := cmd.StdoutPipe()
+		stderr, _ := cmd.StderrPipe()
+		if err := cmd.Start(); err != nil {
+			return err
+		}
+		reader := bufio.NewScanner(io.MultiReader(stdout, stderr))
+		for reader.Scan() {
+			logBuilder.WriteString(reader.Text() + "\n")
+		}
+		if err := cmd.Wait(); err != nil {
+			logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", fullCmd, err))
+			return err
+		}
+		return nil
 	} else {
 		cmd = exec.Command(name, args...)
 	}
