@@ -256,7 +256,17 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 	}
 
 	// 🧰 Основная часть — запуск команды в PTY
-	cmd := exec.Command(name, args...)
+	var cmd *exec.Cmd
+
+	//Использовать “двойной fork” через shell
+	if strings.Contains(fullCmd, "S98xray") {
+		logBuilder.WriteString("🧩 Обнаружен запуск xray — запускаем через двойной fork (&)\n")
+		fullCmd = "(" + fullCmd + ") >/dev/null 2>&1 &"
+		cmd = exec.Command("sh", "-c", fullCmd)
+	} else {
+		cmd = exec.Command(name, args...)
+	}
+
 	// Устанавливаем рабочую директорию для дочернего процесса (чтобы он не пытался писать в RO текущую директорию)
 	cmd.Dir = workDir
 
@@ -293,8 +303,6 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 
 	// Закрыть pty в конце
 	defer func() {
-		logBuilder.WriteString("⏳ Ждём 10 минут перед закрытием PTY...\n")
-		time.Sleep(10 * time.Minute)
 		logBuilder.WriteString("Закрытие PTY...\n")
 		_ = ptmx.Close()
 	}()
