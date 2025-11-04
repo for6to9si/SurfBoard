@@ -204,6 +204,9 @@ func showError(bot *telego.Bot, msg telego.Message, prefix, log string, done cha
 func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args ...string) error {
 	fullCmd := fmt.Sprintf("%s %s", name, strings.Join(args, " "))
 
+	// Рабочая директория для команды и для временных скриптов (обычно /tmp)
+	workDir := os.TempDir()
+
 	// 🧩 Проверяем, обновляется ли SurfBoard через opkg
 	if strings.Contains(fullCmd, "opkg install") && strings.Contains(fullCmd, "surfboard") {
 		logBuilder.WriteString("\n⚙️ Обнаружено обновление самой программы SurfBoard\n")
@@ -227,13 +230,25 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 			"", // добавляет \n в конце
 		}, "\n")
 
-		// Записываем скрипт на диск
-		_ = os.WriteFile(script1, []byte(restartScript1), 0755)
-		_ = os.WriteFile(script2, []byte(restartScript2), 0755)
+		// Попытка записать скрипты в workDir
+		if err := os.WriteFile(script1, []byte(restartScript1), 0755); err != nil {
+			logBuilder.WriteString(fmt.Sprintf("⚠️ Не удалось записать %s: %v\n", script1, err))
+		} else {
+			logBuilder.WriteString(fmt.Sprintf("ℹ️ Создан скрипт %s\n", script1))
+		}
+		if err := os.WriteFile(script2, []byte(restartScript2), 0755); err != nil {
+			logBuilder.WriteString(fmt.Sprintf("⚠️ Не удалось записать %s: %v\n", script2, err))
+		} else {
+			logBuilder.WriteString(fmt.Sprintf("ℹ️ Создан скрипт %s\n", script2))
+		}
 
-		// Запускаем его асинхронно
-		_ = exec.Command("sh", "-c", "sh "+script1+" &").Start()
-		_ = exec.Command("sh", "-c", "sh "+script2+" &").Start()
+		// Запускаем их асинхронно из workDir (sh script &)
+		if err := exec.Command("sh", "-c", "sh "+script1+" &").Start(); err != nil {
+			logBuilder.WriteString(fmt.Sprintf("⚠️ Не удалось запустить %s: %v\n", script1, err))
+		}
+		if err := exec.Command("sh", "-c", "sh "+script2+" &").Start(); err != nil {
+			logBuilder.WriteString(fmt.Sprintf("⚠️ Не удалось запустить %s: %v\n", script2, err))
+		}
 
 		logBuilder.WriteString("🚀 Перезапуск SurfBoard будет выполнен через 45 и 90 секунд...\n")
 		logBuilder.WriteString("♻️ Текущий процесс завершится для обновления\n")
@@ -242,33 +257,59 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 
 	// 🧰 Основная часть — запуск команды в PTY
 	cmd := exec.Command(name, args...)
+	// Устанавливаем рабочую директорию для дочернего процесса (чтобы он не пытался писать в RO текущую директорию)
+	cmd.Dir = workDir
 
 	// создаём псевдо-терминал
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
-		logBuilder.WriteString(fmt.Sprintf("⚠️ Не удалось создать PTY: %v\n", err))
-		return err
+		// Если PTY не создаётся — логируем и пытаемся запустить обычным способом (с той же workDir)
+		logBuilder.WriteString(fmt.Sprintf("⚠️ Не удалось создать PTY, выполняю без PTY: %v\n", err))
+
+		// Обычный запуск
+		cmd2 := exec.Command(name, args...)
+		cmd2.Dir = workDir
+		stdout, _ := cmd2.StdoutPipe()
+		stderr, _ := cmd2.StderrPipe()
+		if err := cmd2.Start(); err != nil {
+			return err
+		}
+		reader := bufio.NewScanner(io.MultiReader(stdout, stderr))
+		for reader.Scan() {
+			line := reader.Text()
+			if filterWget {
+				if strings.Contains(line, "%") || strings.Contains(line, "....") || strings.Contains(line, "K ") {
+					continue
+				}
+			}
+			logBuilder.WriteString(line + "\n")
+		}
+		if err := cmd2.Wait(); err != nil {
+			logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", fullCmd, err))
+			return err
+		}
+		return nil
 	}
+	// Закрыть pty в конце
 	defer func() { _ = ptmx.Close() }()
 
-	// читаем stdout + stderr через pty
-	reader := bufio.NewScanner(ptmx)
-	for reader.Scan() {
-		line := reader.Text()
+	// Чтение из PTY
+	scanner := bufio.NewScanner(ptmx)
+	for scanner.Scan() {
+		line := scanner.Text()
 		if filterWget {
 			if strings.Contains(line, "%") || strings.Contains(line, "....") || strings.Contains(line, "K ") {
-				continue // фильтруем шум wget
+				continue
 			}
 		}
 		logBuilder.WriteString(line + "\n")
 	}
 
-	// ждём завершения
-	err = cmd.Wait()
-	if err != nil {
-		logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", name, err))
+	if err := cmd.Wait(); err != nil {
+		logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", fullCmd, err))
+		return err
 	}
-	return err
+	return nil
 }
 
 // ioMulti объединяет несколько io.Reader
