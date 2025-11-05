@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/creack/pty"
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
+	"golang.org/x/term"
 )
 
 func registerDeploy(
@@ -255,76 +255,43 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 		logBuilder.WriteString("🎯 Для повторного запуска сервиса воспользуйтесь командой /start\n")
 	}
 
-	// 🧰 Основная часть — запуск команды в PTY
+	// 🧰 Основная часть
 	var cmd *exec.Cmd
 
-	//Использовать “двойной fork” через shell
-	if strings.Contains(fullCmd, "S98xray") {
-		logBuilder.WriteString("🧩 Обнаружен xray — выполняю без PTY, чтобы избежать SIGHUP\n")
-		cmd = exec.Command("sh", "-c", fullCmd)
-		cmd.Dir = workDir
-		stdout, _ := cmd.StdoutPipe()
-		stderr, _ := cmd.StderrPipe()
-		if err := cmd.Start(); err != nil {
-			return err
-		}
-		reader := bufio.NewScanner(io.MultiReader(stdout, stderr))
-		for reader.Scan() {
-			logBuilder.WriteString(reader.Text() + "\n")
-		}
-		if err := cmd.Wait(); err != nil {
-			logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", fullCmd, err))
-			return err
-		}
-		return nil
-	} else {
-		cmd = exec.Command(name, args...)
-	}
+	// Особое поведение для xray
+	//if strings.Contains(fullCmd, "S98xray") {
+	//	logBuilder.WriteString("🧩 Обнаружен xray — выполняю без терминала, чтобы избежать SIGHUP\n")
+	//	cmd = exec.Command("sh", "-c", fullCmd+" >/dev/null 2>&1 &")
+	//	if err := cmd.Start(); err != nil {
+	//		return fmt.Errorf("не удалось запустить xray: %v", err)
+	//	}
+	//	logBuilder.WriteString("🚀 Xray запущен в фоне\n")
+	//	return nil
+	//}
 
-	// Устанавливаем рабочую директорию для дочернего процесса (чтобы он не пытался писать в RO текущую директорию)
+	// Обычная команда
+	cmd = exec.Command(name, args...)
 	cmd.Dir = workDir
 
-	// создаём псевдо-терминал
-	ptmx, err := pty.Start(cmd)
-	if err != nil {
-		// Если PTY не создаётся — логируем и пытаемся запустить обычным способом (с той же workDir)
-		logBuilder.WriteString(fmt.Sprintf("⚠️ Не удалось создать PTY, выполняю без PTY: %v\n", err))
-
-		// Обычный запуск
-		cmd2 := exec.Command(name, args...)
-		cmd2.Dir = workDir
-		stdout, _ := cmd2.StdoutPipe()
-		stderr, _ := cmd2.StderrPipe()
-		if err := cmd2.Start(); err != nil {
-			return err
+	// Создаём псевдо-терминал с помощью golang.org/x/term
+	stdinFd := int(os.Stdin.Fd())
+	if term.IsTerminal(stdinFd) {
+		oldState, err := term.MakeRaw(stdinFd)
+		if err == nil {
+			defer term.Restore(stdinFd, oldState)
 		}
-		reader := bufio.NewScanner(io.MultiReader(stdout, stderr))
-		for reader.Scan() {
-			line := reader.Text()
-			if filterWget {
-				if strings.Contains(line, "%") || strings.Contains(line, "....") || strings.Contains(line, "K ") {
-					continue
-				}
-			}
-			logBuilder.WriteString(line + "\n")
-		}
-		if err := cmd2.Wait(); err != nil {
-			logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", fullCmd, err))
-			return err
-		}
-		return nil
 	}
 
-	// Закрыть pty в конце
-	defer func() {
-		logBuilder.WriteString("Закрытие PTY...\n")
-		_ = ptmx.Close()
-	}()
+	stdout, _ := cmd.StdoutPipe()
+	stderr, _ := cmd.StderrPipe()
 
-	// Чтение из PTY
-	scanner := bufio.NewScanner(ptmx)
-	for scanner.Scan() {
-		line := scanner.Text()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	reader := bufio.NewScanner(io.MultiReader(stdout, stderr))
+	for reader.Scan() {
+		line := reader.Text()
 		if filterWget {
 			if strings.Contains(line, "%") || strings.Contains(line, "....") || strings.Contains(line, "K ") {
 				continue
@@ -333,10 +300,15 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 		logBuilder.WriteString(line + "\n")
 	}
 
+	if err := reader.Err(); err != nil {
+		logBuilder.WriteString(fmt.Sprintf("⚠️ Ошибка чтения вывода: %v\n", err))
+	}
+
 	if err := cmd.Wait(); err != nil {
 		logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", fullCmd, err))
 		return err
 	}
+
 	return nil
 }
 
