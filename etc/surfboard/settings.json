@@ -4,7 +4,7 @@
         "isEnabled": true,
         "paths":
         {
-            "xrayExecutable": "/opt/sbin/xray",
+        "xrayExecutable": "/opt/sbin/xray",
             "xrayRestart": "/opt/etc/init.d/S98xray fast_restart",
             "xrayStart": "/opt/etc/init.d/S98xray start",
             "xrayStop": "/opt/etc/init.d/S98xray stop",
@@ -111,7 +111,10 @@
                   "mips": "(?i)mips(32|64)\\.(?:.*\\.)?(?:ipk|tar\\.gz)$"
                 },
                 "only_release": true,
-                "restart_command": "/opt/etc/init.d/S98xray restart",
+                "service_commands": [
+                  "/opt/etc/init.d/S98xray restart",
+                  "/opt/etc/init.d/S98xray firewall_up"
+                ],
                 "isEnabled": true
             },
             "sing-box":
@@ -127,7 +130,10 @@
                   "mips": "(?i)(^|[-_.])mips([-_.]|$).*?\\.(ipk|tar\\.gz)$"
                 },
                 "only_release": true,
-                "restart_command": "/opt/etc/init.d/S99sing-box restart",
+                "service_commands": [
+                  "/opt/etc/init.d/S99sing-box restart",
+                  "/opt/etc/init.d/S99sing-box firewall_up"
+                ],
                 "isEnabled": true
             },
             "surfBoard":
@@ -143,7 +149,7 @@
                   "mips": "(?i)mips\\.(?:.*\\.)?(?:ipk|tar\\.gz)$"
                 },
                 "isEnabled": true,
-                "restart_command": "/opt/etc/init.d/S99surfboard restart",
+                "service_commands": ["/home/andrew/work/for6to9si/telegram/SurfBoard/build/surfboard-amd64 -version"],
                 "only_release": true
             },
             "youtubeUnblock":
@@ -157,7 +163,7 @@
                   "mips": "(?i)entware.*\\bmips\\b.*?\\.(ipk|tar\\.gz)$"
                 },
                 "only_release": true,
-                "restart_command": "/opt/etc/init.d/S91youtubeUnblock restart",
+                "service_commands": ["/opt/etc/init.d/S91youtubeUnblock restart"],
                 "isEnabled": true
             },
             "nfqws":

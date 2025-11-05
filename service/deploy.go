@@ -153,28 +153,40 @@ func installReleaseLive(bot *telego.Bot, cfg *conf.Programm, msg telego.Message,
 			logBuilder.WriteString("\n🧹 Кэш успешно очищен\n")
 		}
 
-		// 5️⃣ restart program
-		if cfg.RestartCommand != "" {
-			// Разделяем строку на части
-			parts := strings.Fields(cfg.RestartCommand)
-			// Первый элемент — это имя команды
-			name := parts[0]
-			// Остальные — аргументы
-			args := parts[1:]
-			logBuilder.WriteString(fmt.Sprintf("\n>>> %s %s\n", name, strings.Join(args, " ")))
+		// 5️⃣ restart program — теперь несколько команд в cfg.ServiceCommand ([]string)
+		if len(cfg.ServiceCommand) > 0 {
+			total := len(cfg.ServiceCommand)
+			for i, cmdStr := range cfg.ServiceCommand {
+				cmdStr = strings.TrimSpace(cmdStr)
+				if cmdStr == "" {
+					continue // пропустить пустую строку
+				}
 
-			if err := runAndLog(&logBuilder, false, name, args...); err != nil {
-				showError(bot, msg, "Ошибка при перезапуске программы", logBuilder.String(), done)
-				return
+				// Разбиваем строку на имя команды и аргументы
+				parts := strings.Fields(cmdStr)
+				if len(parts) == 0 {
+					continue
+				}
+				name := parts[0]
+				args := parts[1:]
+
+				// Логируем с номером итерации
+				logBuilder.WriteString(fmt.Sprintf("\n>>> [%d/%d] %s %s\n", i+1, total, name, strings.Join(args, " ")))
+
+				if err := runAndLog(&logBuilder, false, name, args...); err != nil {
+					// При ошибке — показываем пользователю накопленный лог и выходим
+					showError(bot, msg, fmt.Sprintf("Ошибка при перезапуске (команда %d/%d)", i+1, total), logBuilder.String(), done)
+					return
+				}
+
+				// Небольшая пауза между командами, чтобы появлялся вывод
+				time.Sleep(2 * time.Second)
 			}
 
-			// Немного подождать, чтобы успел появиться вывод
-			time.Sleep(2 * time.Second)
-
-			logBuilder.WriteString("\n🔁 Программа успешно перезапущена\n")
+			logBuilder.WriteString("\n🔁 Все команды перезапуска выполнены успешно\n")
 
 		} else {
-			logBuilder.WriteString(fmt.Sprintf("\n>>> Строка запуска для программы %s не задана \n", fileName))
+			logBuilder.WriteString(fmt.Sprintf("\n>>> Команды перезапуска для программы %s не заданы\n", fileName))
 		}
 
 		close(done)
