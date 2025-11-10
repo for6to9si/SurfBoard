@@ -266,57 +266,6 @@ func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 		logBuilder.WriteString("🎯 Для повторного запуска сервиса воспользуйтесь командой /start\n")
 	}
 
-	// 🧩 Специальная обработка только для xray
-	if strings.Contains(fullCmd, "S98xray") {
-		logBuilder.WriteString("🧩 Обнаружен xray — выполняю через /dev/tty (если доступен)\n")
-
-		var ttyFile *os.File
-		for _, path := range []string{"/dev/tty", "/dev/tty0"} {
-			if f, err := os.OpenFile(path, os.O_RDWR, 0); err == nil {
-				logBuilder.WriteString(fmt.Sprintf("ℹ️ Использую %s как TTY для %s\n", path, name))
-				ttyFile = f
-				break
-			}
-		}
-
-		cmd := exec.Command("sh", "-c", fullCmd)
-		cmd.Dir = workDir
-
-		if ttyFile != nil {
-			defer ttyFile.Close()
-			cmd.Stdin = ttyFile
-			cmd.Stdout = ttyFile
-			cmd.Stderr = ttyFile
-			if err := cmd.Start(); err != nil {
-				logBuilder.WriteString(fmt.Sprintf("⚠️ Ошибка запуска %s: %v\n", fullCmd, err))
-				return err
-			}
-			go func() {
-				// Чтобы xray не блокировал основной поток
-				cmd.Wait()
-			}()
-			logBuilder.WriteString("✅ xray запущен через реальный TTY\n")
-			return nil
-		}
-
-		// fallback если нет tty
-		logBuilder.WriteString("⚠️ /dev/tty не найден — выполняю без TTY\n")
-		stdout, _ := cmd.StdoutPipe()
-		stderr, _ := cmd.StderrPipe()
-		if err := cmd.Start(); err != nil {
-			return err
-		}
-		reader := bufio.NewScanner(io.MultiReader(stdout, stderr))
-		for reader.Scan() {
-			logBuilder.WriteString(reader.Text() + "\n")
-		}
-		if err := cmd.Wait(); err != nil {
-			logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка выполнения %s: %v\n", fullCmd, err))
-			return err
-		}
-		return nil
-	}
-
 	// 🧰 Обычное выполнение для остальных команд
 	cmd := exec.Command(name, args...)
 	cmd.Dir = workDir
