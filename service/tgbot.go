@@ -21,6 +21,12 @@ const (
 	StateSetupApps
 )
 
+const (
+	FileRoutingBalancers = "05-routing-balancers.json"
+	FileSystemDefault    = "00-system-default.json"
+	FileXwaveConf        = "xwave-conf.json"
+)
+
 // --- Модель пользователя ---
 type User struct {
 	State State
@@ -89,5 +95,6 @@ func RegisterHandlers(
 	registerHandlers(bh, bot, config, isUserAuthorized)
 	registerDeploy(bh, bot, config, isUserAuthorized)
 	registerParserkHandler(bh, bot, config, xrayClient, benchmarkClient, isUserAuthorized)
+	registerFilesHandler(bh, bot, config, xrayClient, benchmarkClient, isUserAuthorized)
 	registerCallbackHandler(bh, bot, config, xrayClient, benchmarkClient, isUserAuthorized)
 }

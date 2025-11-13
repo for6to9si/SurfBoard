@@ -78,6 +78,7 @@ func registerCallbackHandler(
 
 		currentVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "current_vpn"})
 		allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
+		filesVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "change_files_vpn"})
 		addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
 		//		done, _ := loc.LocalizeMessage(&i18n.Message{ID: "done"})
 		underDevelopment, _ := loc.LocalizeMessage(&i18n.Message{ID: "under_development"})
@@ -149,15 +150,56 @@ func registerCallbackHandler(
 			).WithReplyMarkup(tu.InlineKeyboard(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("xray_current_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("xray_all_vpns")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(filesVPN).WithCallbackData("getfile")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("xray_add_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
+
 		case "xray_current_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(xraygRpcclient)))
 		case "xray_all_vpns":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(xraygRpcclient)))
+		case "xray_files":
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(xraygRpcclient)))
 		case "xray_add_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(xraygRpcclient)))
+
+		case "getfile":
+
+			var text string
+			switch user.State {
+			case StateBenchmark:
+				text = ""
+
+			case StateXray:
+				text = "🧩 " + FileXwaveConf
+			case StateSingBox:
+				text = "🧩 swave-conf.json"
+
+			default:
+				panic("unknown state")
+			}
+
+			// Создаем массив рядов клавиатуры
+			rows := [][]telego.InlineKeyboardButton{
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("⚙️ " + FileSystemDefault).WithCallbackData(FileSystemDefault),
+				),
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("📄 " + FileRoutingBalancers).WithCallbackData(FileRoutingBalancers),
+				),
+			}
+
+			// Добавляем кнопку только если это не StateBenchmark
+			if user.State != StateBenchmark {
+				rows = append(rows, tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton(text).WithCallbackData(FileXwaveConf),
+				))
+			}
+
+			keyboard := tu.InlineKeyboard(rows...)
+
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "Выбери файл для скачивания:").WithReplyMarkup(keyboard))
 
 		case "benchmark_vpn":
 
@@ -266,6 +308,14 @@ func registerCallbackHandler(
 		default:
 			_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
 		}
+
+		//if query.Data == "/getfile" {
+		//	// Вызываем обработчик, как будто пользователь ввёл команду вручную
+		//	handleVPNState(ctx, telego.Message{Text: "/getfile"}, bot, client, confDir)
+		//	return
+		//}
+		// === Callback от кнопок ===
+		handleCallback(ctx, bot, &query, config)
 
 		return nil
 	}, th.AnyCallbackQueryWithMessage())

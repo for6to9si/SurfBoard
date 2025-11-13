@@ -138,7 +138,7 @@ func handleVPNState(
 		}
 	}
 
-	tags := benchmarkMode.Parses(filteredLines, confDir)
+	tags := benchmarkMode.Parses(filteredLines, confDir) //обратка vless://..., ss://..
 
 	for _, line := range tags {
 		if strings.TrimSpace(line) == "" {

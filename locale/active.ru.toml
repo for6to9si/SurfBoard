@@ -46,5 +46,8 @@ other = "Доступ запрещён: вы не авторизованы дл�
 [under_development]
 other = "Cервис находится в разработке. Доступ закрыт"
 
+[change_files_vpn]
+other = "Конфиг"
+
 [version_flag_description]
 other = "Вывести версию приложения и выйти"

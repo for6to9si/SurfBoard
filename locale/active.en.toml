@@ -46,5 +46,8 @@ other = "Access denied: You are not authorized to use this bot. Your User ID is 
 [under_development]
 other = "The service is under development. Access is closed"
 
+[change_files_vpn]
+other = "Config"
+
 [version_flag_description]
 other = "Print the version of the application and exit"
