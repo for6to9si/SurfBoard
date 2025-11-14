@@ -196,6 +196,7 @@ func registerCallbackHandler(
 					tu.InlineKeyboardButton(text).WithCallbackData(FileXwaveConf),
 				))
 			}
+			rows = append(rows, tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("xray_vpn")))
 
 			keyboard := tu.InlineKeyboard(rows...)
 

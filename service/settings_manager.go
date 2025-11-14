@@ -134,6 +134,8 @@ func handleFileUpload(ctx context.Context, bot *telego.Bot, chatID telego.ChatID
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("🧩 "+FileXwaveConf).WithCallbackData(FileXwaveConf),
 		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("xray_vpn")),
 	)
 	_, _ = bot.SendMessage(ctx, tu.Message(chatID, "Хочешь скачать файлы? Нажми кнопку:").WithReplyMarkup(keyboard))
 }
