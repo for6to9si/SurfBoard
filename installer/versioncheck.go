@@ -137,6 +137,10 @@ func getRelease(repo string) (string, error) {
 		return fmt.Sprintln("GitHub API rate limit exceeded"), nil
 	}
 
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Sprintln("401 Unauthorized"), nil
+	}
+
 	var release Release
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return "", err
