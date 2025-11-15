@@ -161,6 +161,9 @@ func registerCallbackHandler(
 
 		case "xray_run_x98xray_backup":
 
+			// Сразу убираем часики
+			_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
+
 			var logBuilder strings.Builder
 			// Разбиваем строку на имя команды и аргументы
 			parts := strings.Fields(config.XwayConf.Paths.XrayBackup)
@@ -179,6 +182,9 @@ func registerCallbackHandler(
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), logBuilder.String()))
 
 		case "xray_build_routing":
+
+			// Сразу убираем часики
+			_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
 
 			tags, err := benchmarkMode.GetTags(config.XwayConf.Env.XrayLocationConfdir)
 			if err != nil {
