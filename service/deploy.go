@@ -127,21 +127,21 @@ func installReleaseLive(bot *telego.Bot, cfg *conf.Programm, msg telego.Message,
 
 		// 1️⃣ opkg update
 		logBuilder.WriteString(">>> opkg update\n")
-		if err := runAndLog(&logBuilder, false, "opkg", "update"); err != nil {
+		if err := RunAndLog(&logBuilder, false, "opkg", "update"); err != nil {
 			showError(bot, msg, "Ошибка при обновлении пакетов", logBuilder.String(), done)
 			return
 		}
 
 		// 2️⃣ wget с фильтрацией вывода
 		logBuilder.WriteString(fmt.Sprintf("\n>>> wget %s\n", urlStr))
-		if err := runAndLog(&logBuilder, true, "wget", "-O", fileName, urlStr); err != nil {
+		if err := RunAndLog(&logBuilder, true, "wget", "-O", fileName, urlStr); err != nil {
 			showError(bot, msg, "Ошибка при скачивании пакета", logBuilder.String(), done)
 			return
 		}
 
 		// 3️⃣ opkg install
 		logBuilder.WriteString(fmt.Sprintf("\n>>> opkg install --force-downgrade %s\n", fileName))
-		if err := runAndLog(&logBuilder, false, "opkg", "install", "--force-downgrade", "./"+fileName); err != nil {
+		if err := RunAndLog(&logBuilder, false, "opkg", "install", "--force-downgrade", "./"+fileName); err != nil {
 			showError(bot, msg, "Ошибка при установке пакета", logBuilder.String(), done)
 			return
 		}
@@ -173,7 +173,7 @@ func installReleaseLive(bot *telego.Bot, cfg *conf.Programm, msg telego.Message,
 				// Логируем с номером итерации
 				logBuilder.WriteString(fmt.Sprintf("\n>>> [%d/%d] %s %s\n", i+1, total, name, strings.Join(args, " ")))
 
-				if err := runAndLog(&logBuilder, false, name, args...); err != nil {
+				if err := RunAndLog(&logBuilder, false, name, args...); err != nil {
 					// При ошибке — показываем пользователю накопленный лог и выходим
 					showError(bot, msg, fmt.Sprintf("Ошибка при перезапуске (команда %d/%d)", i+1, total), logBuilder.String(), done)
 					return
@@ -210,9 +210,9 @@ func showError(bot *telego.Bot, msg telego.Message, prefix, log string, done cha
 		prefix, lastLines(log, 30)), *inlineKb)
 }
 
-// runAndLog запускает команду и пишет её вывод в лог
+// RunAndLog запускает команду и пишет её вывод в лог
 // Если filterWget == true — убирает лишние строки из wget
-func runAndLog(logBuilder *strings.Builder, filterWget bool, name string, args ...string) error {
+func RunAndLog(logBuilder *strings.Builder, filterWget bool, name string, args ...string) error {
 	fullCmd := fmt.Sprintf("%s %s", name, strings.Join(args, " "))
 
 	// Рабочая директория для команды и для временных скриптов (обычно /tmp)

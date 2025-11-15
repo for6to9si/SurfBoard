@@ -150,22 +150,34 @@ func registerCallbackHandler(
 			).WithReplyMarkup(tu.InlineKeyboard(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("xray_current_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("xray_all_vpns")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton(filesVPN).WithCallbackData("getfile")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(filesVPN).WithCallbackData("xray_getfile")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Быстрый перезапуск").WithCallbackData("xray_fast_restart")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("xray_add_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
+		case "xray_fast_restart":
+			var logBuilder strings.Builder
+			// Разбиваем строку на имя команды и аргументы
+			parts := strings.Fields(config.XwayConf.Paths.XrayRestart)
+			if len(parts) == 0 {
+				logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка Restart: \n"))
+			}
+			name := parts[0]
+			args := parts[1:]
+
+			if err := RunAndLog(&logBuilder, false, name, args...); err != nil {
+				// При ошибке — показываем пользователю накопленный лог и выходим
+				logBuilder.WriteString(fmt.Sprintf("Ошибка при перезапуске (команда %s)", parts))
+			}
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), logBuilder.String()))
 
 		case "xray_current_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), getCurrentVPN(xraygRpcclient)))
 		case "xray_all_vpns":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(xraygRpcclient)))
-		case "xray_files":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(xraygRpcclient)))
 		case "xray_add_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(xraygRpcclient)))
-
-		case "getfile":
-
+		case "xray_getfile":
 			var text string
 			switch user.State {
 			case StateBenchmark:
