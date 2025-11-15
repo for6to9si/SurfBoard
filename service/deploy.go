@@ -285,7 +285,7 @@ func RunAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 
 	reader := bufio.NewScanner(io.MultiReader(stdout, stderr))
 	for reader.Scan() {
-		line := cleanLogLine(reader.Text())
+		line := mapStatus(cleanAnsi(reader.Text()))
 		if filterWget {
 			if strings.Contains(line, "%") || strings.Contains(line, "....") || strings.Contains(line, "K ") {
 				continue
@@ -302,31 +302,22 @@ func RunAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 	return nil
 }
 
-func cleanLogLine(line string) string {
-	// Убираем ANSI цвета
-	line = ansiColorRegex.ReplaceAllString(line, "")
+func cleanAnsi(line string) string {
+	// Очищаем только цветовые коды
+	return ansiColorRegex.ReplaceAllString(line, "")
+}
 
-	// Убираем управляющие символы (\t, \r)
-	line = controlCharRegex.ReplaceAllString(line, "")
+func mapStatus(line string) string {
+	low := strings.ToLower(line)
 
-	// Заменяем двойные пробелы
-	line = multiSpaceRegex.ReplaceAllString(line, " ")
-
-	// Ставим красивые emoji вместо сообщений
-	replacements := map[string]string{
-		"отключён":    "❌ отключён",
-		"запускается": "🔄 запускается...",
-		"запущен":     "🟢 запущен",
-		"остановлен":  "🛑 остановлен",
-		"ошибка":      "⚠️ ошибка",
+	switch {
+	case strings.Contains(low, "отключ"):
+		return line + " ❌"
+	case strings.Contains(low, "запускается"):
+		return line + " 🔄"
+	case strings.Contains(low, "запущ"):
+		return line + " 🟢"
 	}
-
-	for k, v := range replacements {
-		if strings.Contains(strings.ToLower(line), k) {
-			return v
-		}
-	}
-
 	return line
 }
 
