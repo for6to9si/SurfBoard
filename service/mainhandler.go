@@ -166,6 +166,8 @@ func registerCallbackHandler(
 			parts := strings.Fields(config.XwayConf.Paths.XrayBackup)
 			if len(parts) == 0 {
 				logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка Backup: \n"))
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), logBuilder.String()))
+				break
 			}
 			name := parts[0]
 			args := parts[1:]
