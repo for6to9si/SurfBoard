@@ -165,7 +165,7 @@ func registerCallbackHandler(
 			// Разбиваем строку на имя команды и аргументы
 			parts := strings.Fields(config.XwayConf.Paths.XrayBackup)
 			if len(parts) == 0 {
-				logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка Backup: \n"))
+				logBuilder.WriteString(fmt.Sprintf("Ошибка создания Backup (команда %s)", parts))
 				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), logBuilder.String()))
 				break
 			}
