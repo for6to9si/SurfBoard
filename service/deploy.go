@@ -10,12 +10,19 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
+)
+
+var (
+	ansiColorRegex   = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+	multiSpaceRegex  = regexp.MustCompile(`\s{2,}`)
+	controlCharRegex = regexp.MustCompile(`[\t\r]`)
 )
 
 func registerDeploy(
@@ -278,7 +285,7 @@ func RunAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 
 	reader := bufio.NewScanner(io.MultiReader(stdout, stderr))
 	for reader.Scan() {
-		line := reader.Text()
+		line := cleanLogLine(reader.Text())
 		if filterWget {
 			if strings.Contains(line, "%") || strings.Contains(line, "....") || strings.Contains(line, "K ") {
 				continue
@@ -293,6 +300,34 @@ func RunAndLog(logBuilder *strings.Builder, filterWget bool, name string, args .
 	}
 
 	return nil
+}
+
+func cleanLogLine(line string) string {
+	// Убираем ANSI цвета
+	line = ansiColorRegex.ReplaceAllString(line, "")
+
+	// Убираем управляющие символы (\t, \r)
+	line = controlCharRegex.ReplaceAllString(line, "")
+
+	// Заменяем двойные пробелы
+	line = multiSpaceRegex.ReplaceAllString(line, " ")
+
+	// Ставим красивые emoji вместо сообщений
+	replacements := map[string]string{
+		"отключён":    "❌ отключён",
+		"запускается": "🔄 запускается...",
+		"запущен":     "🟢 запущен",
+		"остановлен":  "🛑 остановлен",
+		"ошибка":      "⚠️ ошибка",
+	}
+
+	for k, v := range replacements {
+		if strings.Contains(strings.ToLower(line), k) {
+			return v
+		}
+	}
+
+	return line
 }
 
 // ioMulti объединяет несколько io.Reader
