@@ -154,9 +154,27 @@ func registerCallbackHandler(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(filesVPN).WithCallbackData("xray_getfile")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Быстрый перезапуск XRAY").WithCallbackData("xray_fast_restart")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Сгенерировать routing-settings.json").WithCallbackData("xray_build_routing")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Выполнить S98xray backup").WithCallbackData("xray_run_x98xray_backup")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("xray_add_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
+
+		case "xray_run_x98xray_backup":
+
+			var logBuilder strings.Builder
+			// Разбиваем строку на имя команды и аргументы
+			parts := strings.Fields(config.XwayConf.Paths.XrayBackup)
+			if len(parts) == 0 {
+				logBuilder.WriteString(fmt.Sprintf("\n⚠️ Ошибка Backup: \n"))
+			}
+			name := parts[0]
+			args := parts[1:]
+
+			if err := RunAndLog(&logBuilder, false, name, args...); err != nil {
+				// При ошибке — показываем пользователю накопленный лог и выходим
+				logBuilder.WriteString(fmt.Sprintf("Ошибка создания Backup (команда %s)", parts))
+			}
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), logBuilder.String()))
 
 		case "xray_build_routing":
 

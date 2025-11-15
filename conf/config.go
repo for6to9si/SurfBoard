@@ -25,12 +25,14 @@ type Paths struct {
 	XrayStart         string `json:"xrayStart"`
 	XrayStop          string `json:"xrayStop"`
 	XrayStatus        string `json:"xrayStatus"`
+	XrayBackup        string `json:"xrayBackup"`
 	XraylockFile      string `json:"xraylockFile"`
 	SingboxExecutable string `json:"singboxExecutable"`
 	SingboxRestart    string `json:"singboxRestart"`
 	SingboxStart      string `json:"singboxStart"`
 	SingboxStop       string `json:"singboxStop"`
 	SingboxStatus     string `json:"singboxStatus"`
+	SingboxBackup     string `json:"singboxBackup"`
 	SingboxlockFile   string `json:"singboxlockFile"`
 }
 type Env struct {

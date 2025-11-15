@@ -4,11 +4,12 @@
         "isEnabled": true,
         "paths":
         {
-        "xrayExecutable": "/opt/sbin/xray",
+            "xrayExecutable": "/opt/sbin/xray",
             "xrayRestart": "/opt/etc/init.d/S98xray fast_restart",
             "xrayStart": "/opt/etc/init.d/S98xray start",
             "xrayStop": "/opt/etc/init.d/S98xray stop",
             "xrayStatus": "/opt/etc/init.d/S98xray status",
+            "xrayBackup": "/opt/etc/init.d/S98xray backup",
             "xraylockFile": "/opt/tmp/xray-xwave.lock"
         },
         "env":
@@ -37,6 +38,7 @@
             "singboxStart": "/opt/etc/init.d/S99singbox start",
             "singboxStop": "/opt/etc/init.d/S99singbox stop",
             "singboxStatus": "/opt/etc/init.d/S99singbox status",
+            "singboxBackup": "/opt/etc/init.d/S99singbox backup",
             "singboxlockFile": "/opt/tmp/S99singbox-sway.lock"
         },
         "env":
