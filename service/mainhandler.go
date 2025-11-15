@@ -151,10 +151,37 @@ func registerCallbackHandler(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("xray_current_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("xray_all_vpns")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(filesVPN).WithCallbackData("xray_getfile")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Быстрый перезапуск").WithCallbackData("xray_fast_restart")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Быстрый перезапуск XRAY").WithCallbackData("xray_fast_restart")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Сгенерировать routing-settings.json").WithCallbackData("xray_build_routin")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("xray_add_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
+
+		case "xray_build_routing":
+
+			tags := benchmarkMode.GetTags(config.XwayConf.Env.XrayLocationConfdir)
+			for _, line := range tags {
+				// Пропускаем пустые строки, если они есть
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
+			}
+
+			// Формируем полный путь к файлу
+			fulltempdir := filepath.Join(config.XwayConf.Env.XrayLocationTemplatedir, "05-routing-settings.json")
+			fullpath := filepath.Join(config.XwayConf.Env.XrayLocationConfdir, "routing-settings.generated.json")
+
+			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags)
+
+			for _, line := range results {
+				// Пропускаем пустые строки, если они есть
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
+			}
+
 		case "xray_fast_restart":
 			var logBuilder strings.Builder
 			// Разбиваем строку на имя команды и аргументы
