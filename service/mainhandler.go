@@ -7,6 +7,7 @@ import (
 	"SurfBoard/installer"
 	"SurfBoard/locale"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -152,14 +153,19 @@ func registerCallbackHandler(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("xray_all_vpns")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(filesVPN).WithCallbackData("xray_getfile")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Быстрый перезапуск XRAY").WithCallbackData("xray_fast_restart")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Сгенерировать routing-settings.json").WithCallbackData("xray_build_routin")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Сгенерировать routing-settings.json").WithCallbackData("xray_build_routing")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("xray_add_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
 
 		case "xray_build_routing":
 
-			tags := benchmarkMode.GetTags(config.XwayConf.Env.XrayLocationConfdir)
+			tags, err := benchmarkMode.GetTags(config.XwayConf.Env.XrayLocationConfdir)
+			if err != nil {
+				str_tmp := fmt.Sprintf("Ошибка: %v", err)
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), str_tmp))
+				break
+			}
 			for _, line := range tags {
 				// Пропускаем пустые строки, если они есть
 				if strings.TrimSpace(line) == "" {
@@ -168,8 +174,15 @@ func registerCallbackHandler(
 				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
 			}
 
-			// Формируем полный путь к файлу
-			fulltempdir := filepath.Join(config.XwayConf.Env.XrayLocationTemplatedir, "05-routing-settings.json")
+			fulltempdir := filepath.Join(config.XwayConf.Env.XrayLocationTemplatedir, "05-routing-balancers.json")
+
+			// Проверяем, существует ли файл
+			if _, err := os.Stat(fulltempdir); os.IsNotExist(err) {
+				// Файл не найден — отправляем сообщение в Telegram
+				strTmp := "❗ Файл 05-routing-balancers.json не найден в шаблонах!"
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), strTmp))
+				break
+			}
 			fullpath := filepath.Join(config.XwayConf.Env.XrayLocationConfdir, "routing-settings.generated.json")
 
 			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags)
@@ -181,6 +194,10 @@ func registerCallbackHandler(
 				}
 				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
 			}
+
+			str_tmp := fmt.Sprintf("Файл %s был сформирован, перегрузите XRAY", fullpath)
+
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), str_tmp))
 
 		case "xray_fast_restart":
 			var logBuilder strings.Builder
@@ -285,7 +302,14 @@ func registerCallbackHandler(
 
 		case "benchmark_start_xray":
 
-			tags := benchmarkMode.GetTags(config.BenchmarkSettings.Env.XrayLocationConfdir)
+			tags, err := benchmarkMode.GetTags(config.BenchmarkSettings.Env.XrayLocationConfdir)
+
+			if err != nil {
+				str_tmp := fmt.Sprintf("Ошибка: %v", err)
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), str_tmp))
+				break
+			}
+
 			for _, line := range tags {
 				// Пропускаем пустые строки, если они есть
 				if strings.TrimSpace(line) == "" {

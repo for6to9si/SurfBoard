@@ -192,13 +192,10 @@ func Parses(vlessURI []string, path string) []string {
 	return tags
 }
 
-func GetTags(path string) []string {
-	// директория, в которой ищем
-	dir := path
-
-	files, err := os.ReadDir(dir)
+func GetTags(path string) ([]string, error) {
+	files, err := os.ReadDir(path)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	var result []string
@@ -208,14 +205,12 @@ func GetTags(path string) []string {
 		}
 
 		name := f.Name()
-
 		if strings.HasPrefix(name, "!vpn") && strings.HasSuffix(name, ".json") {
-			// убираем префикс и суффикс
 			trimmed := strings.TrimPrefix(name, "!vpn")
 			trimmed = strings.TrimSuffix(trimmed, ".json")
 			result = append(result, trimmed)
 		}
 	}
 
-	return result
+	return result, nil
 }
