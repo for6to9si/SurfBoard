@@ -161,20 +161,20 @@ func registerCallbackHandler(
 			)))
 
 		case "xray_add_domains":
-			bot.SendMessage(ctx, tu.Message(
-				tu.ID(query.Message.GetChat().ID),
-				"Для быстрого применения доменов через GRPG вы можете ввести домены:\n"+
-					"— через запятую\n"+
-					"— или каждый с новой строки\n\n"+
-					"Также можно использовать готовые доменные группы (geosite) из проекта v2fly.\n"+
-					"Список доступных наборов:\n"+
-					"```\n"+
-					"https://github.com/v2fly/domain-list-community/tree/master/data\n"+
-					"```\n"+
-					"Некоторые примеры готовых доменных групп:\n"+
-					"• ext:geosite_v2fly.dat:intel\n"+
-					"• ext:geosite_v2fly.dat:qualcomm\n"+
-					"Просто скопируйте нужные группы и используйте их вместо отдельных доменов."))
+			msg := tu.Message(tu.ID(query.Message.GetChat().ID),
+				"*Для быстрого применения домена через GRPG введите домены:*\n"+
+					"• через запятую\n"+
+					"• или каждый с новой строки\n\n"+
+					"*Также доступны готовые сборки от v2fly:*\n"+
+					"```\nhttps://github.com/v2fly/domain-list-community/tree/master/data\n```\n\n"+
+					"*Примеры:*\n"+
+					"`ext:geosite_v2fly.dat:intel`\n"+
+					"`ext:geosite_v2fly.dat:qualcomm`\n"+
+					"`ext:geosite_v2fly.dat:nvidia`\n"+
+					"`ext:geosite_v2fly.dat:google-deepmind`\n"+
+					"`ext:geosite_v2fly.dat:google-gemini`")
+			msg.ParseMode = telego.ModeMarkdownV2
+			bot.SendMessage(ctx, msg)
 
 		case "xray_run_x98xray_backup":
 
