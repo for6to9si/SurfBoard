@@ -154,10 +154,27 @@ func registerCallbackHandler(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(filesVPN).WithCallbackData("xray_getfile")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Быстрый перезапуск XRAY").WithCallbackData("xray_fast_restart")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Сгенерировать routing-settings.json").WithCallbackData("xray_build_routing")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Добавить домен").WithCallbackData("xray_add_domains")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Выполнить S98xray backup").WithCallbackData("xray_run_x98xray_backup")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("xray_add_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
+
+		case "xray_add_domains":
+			bot.SendMessage(ctx, tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Для быстрого применения доменов через GRPG вы можете ввести домены:\n"+
+					"— через запятую\n"+
+					"— или каждый с новой строки\n\n"+
+					"Также можно использовать готовые доменные группы (geosite) из проекта v2fly.\n"+
+					"Список доступных наборов:\n"+
+					"```\n"+
+					"https://github.com/v2fly/domain-list-community/tree/master/data\n"+
+					"```\n"+
+					"Некоторые примеры готовых доменных групп:\n"+
+					"• ext:geosite_v2fly.dat:intel\n"+
+					"• ext:geosite_v2fly.dat:qualcomm\n"+
+					"Просто скопируйте нужные группы и используйте их вместо отдельных доменов."))
 
 		case "xray_run_x98xray_backup":
 
