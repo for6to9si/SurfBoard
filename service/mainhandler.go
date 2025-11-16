@@ -186,7 +186,7 @@ func registerCallbackHandler(
 			// Сразу убираем часики
 			_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
 
-			tags, err := benchmarkMode.GetTags(config.XwayConf.Env.XrayLocationConfdir)
+			tags, err := benchmarkMode.GetVpns(config.XwayConf.Env.XrayLocationConfdir)
 			if err != nil {
 				str_tmp := fmt.Sprintf("Ошибка: %v", err)
 				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), str_tmp))
@@ -211,7 +211,7 @@ func registerCallbackHandler(
 			}
 			fullpath := filepath.Join(config.XwayConf.Env.XrayLocationConfdir, "routing-settings.generated.json")
 
-			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags)
+			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags, nil)
 
 			for _, line := range results {
 				// Пропускаем пустые строки, если они есть
@@ -328,7 +328,7 @@ func registerCallbackHandler(
 
 		case "benchmark_start_xray":
 
-			tags, err := benchmarkMode.GetTags(config.BenchmarkSettings.Env.XrayLocationConfdir)
+			vpns, err := benchmarkMode.GetVpns(config.BenchmarkSettings.Env.XrayLocationConfdir)
 
 			if err != nil {
 				str_tmp := fmt.Sprintf("Ошибка: %v", err)
@@ -336,7 +336,7 @@ func registerCallbackHandler(
 				break
 			}
 
-			for _, line := range tags {
+			for _, line := range vpns {
 				// Пропускаем пустые строки, если они есть
 				if strings.TrimSpace(line) == "" {
 					continue
@@ -348,7 +348,7 @@ func registerCallbackHandler(
 			fulltempdir := filepath.Join(config.BenchmarkSettings.Env.XrayLocationTemplatedir, "routing-settings.generated.json")
 			fullpath := filepath.Join(config.BenchmarkSettings.Env.XrayLocationConfdir, "routing-settings.generated.json")
 
-			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags)
+			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, vpns, nil)
 
 			for _, line := range results {
 				// Пропускаем пустые строки, если они есть

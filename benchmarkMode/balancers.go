@@ -62,49 +62,50 @@ func clearNodes(cfg *Config) {
 	}
 }
 
-// Функция добавления доменов в правила с balancerTag = bestVPN
-func AddDomainsToRules(cfg *Config, newDomains []string) {
+// Функция добавления доменов в правило с xwave = true
+func addDomainsToRules(cfg *Config, newDomains []string) {
+
+	// Если массив пустой — ничего не делаем
+	if len(newDomains) == 0 {
+		return
+	}
+
 	for i, rule := range cfg.Routing.Rules {
-		// Проверяем inboundTag, balancerTag и type
-		if tags, ok := rule["inboundTag"].([]interface{}); ok {
-			match := false
-			expected := []string{"redirect", "tproxy", "socks-in"}
-			if len(tags) == len(expected) {
-				match = true
-				for j, t := range tags {
-					if t.(string) != expected[j] {
-						match = false
-						break
-					}
+
+		// Мы ищем только правила где присутствует "xwave": "true"
+		flag, ok := rule["xwave"]
+		if !ok || flag != "true" {
+			continue
+		}
+
+		// Проверяем наличие поля domain
+		if domains, ok := rule["domain"].([]interface{}); ok {
+			exist := map[string]bool{}
+			for _, d := range domains {
+				exist[d.(string)] = true
+			}
+
+			// Добавляем новые домены без дубликатов
+			for _, nd := range newDomains {
+				if !exist[nd] {
+					domains = append(domains, nd)
 				}
 			}
-			if match && rule["balancerTag"] == "bestVPN" && rule["type"] == "field" {
-				// Добавляем домены
-				if domains, ok := rule["domain"].([]interface{}); ok {
-					existing := make(map[string]bool)
-					for _, d := range domains {
-						existing[d.(string)] = true
-					}
-					for _, nd := range newDomains {
-						if !existing[nd] {
-							domains = append(domains, nd)
-						}
-					}
-					cfg.Routing.Rules[i]["domain"] = domains
-				} else {
-					// Если "domain" ещё нет — создаём
-					domains := []interface{}{}
-					for _, nd := range newDomains {
-						domains = append(domains, nd)
-					}
-					cfg.Routing.Rules[i]["domain"] = domains
-				}
+
+			cfg.Routing.Rules[i]["domain"] = domains
+
+		} else {
+			// Поля domain нет → создаём новый массив
+			domains := []interface{}{}
+			for _, nd := range newDomains {
+				domains = append(domains, nd)
 			}
+			cfg.Routing.Rules[i]["domain"] = domains
 		}
 	}
 }
 
-func ModifyBalancerJson(template string, filename string, tags []string) []string {
+func ModifyBalancerJson(template string, filename string, vpns []string, newDomains []string) []string {
 
 	var results []string
 	// Читаем файл temp_config.json
@@ -123,7 +124,7 @@ func ModifyBalancerJson(template string, filename string, tags []string) []strin
 	//	clearNodes(&cfg)
 
 	// Добавляем все новые узлы
-	for _, node := range tags {
+	for _, node := range vpns {
 		cfg.BurstObservatory.SubjectSelector = addUnique(cfg.BurstObservatory.SubjectSelector, node)
 		if len(cfg.Routing.Balancers) > 0 {
 			cfg.Routing.Balancers[0].Selector = addUnique(cfg.Routing.Balancers[0].Selector, node)
@@ -140,8 +141,8 @@ func ModifyBalancerJson(template string, filename string, tags []string) []strin
 	//}
 
 	// Добавляем новые домены в rules
-	newDomains := []string{"domain:newsite.com", "domain:example.org"}
-	AddDomainsToRules(&cfg, newDomains)
+
+	addDomainsToRules(&cfg, newDomains)
 
 	// Конвертируем обратно в JSON
 	output, err := json.MarshalIndent(cfg, "", "    ")

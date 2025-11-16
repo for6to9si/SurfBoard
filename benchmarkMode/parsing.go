@@ -192,7 +192,7 @@ func Parses(vlessURI []string, path string) []string {
 	return tags
 }
 
-func GetTags(path string) ([]string, error) {
+func GetVpns(path string) ([]string, error) {
 	files, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
