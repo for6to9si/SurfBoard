@@ -7,6 +7,7 @@ import (
 	"SurfBoard/locale"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -64,11 +65,11 @@ func registerParserkHandler(
 
 		case StateXrayAddDomainToFile:
 			text = "StateXrayAddDomainToFile!"
-			handleDomainState(ctx, message, bot, benchmarkclient, config.BenchmarkSettings.Env.XrayLocationConfdir)
+			handleDomainState(ctx, message, bot, xraygRpcclient, config.XwayConf.Env.XrayLocationTemplatedir)
 
 		case StateBenchmarkAddDomainToFile:
 			text = "StateBenchmarkAddDomainToFile!"
-			handleDomainState(ctx, message, bot, benchmarkclient, config.BenchmarkSettings.Env.XrayLocationConfdir)
+			handleDomainState(ctx, message, bot, benchmarkclient, config.BenchmarkSettings.Env.XrayLocationTemplatedir)
 		case StateSingBox:
 			text = "StateSingBox!"
 
@@ -232,7 +233,13 @@ func handleDomainState(
 		all = append(all, ExtractDomainsAll(line)...)
 	}
 
-	for _, line := range all {
+	// Формируем полный путь к файлу
+	fullpath := filepath.Join(confDir, FileTmpRoutingBalancers)
+
+	results := benchmarkMode.ModifyDomainsJson(fullpath, all)
+
+	for _, line := range results {
+		// Пропускаем пустые строки, если они есть
 		if strings.TrimSpace(line) == "" {
 			continue
 		}

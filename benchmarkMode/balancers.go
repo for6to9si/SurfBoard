@@ -62,50 +62,91 @@ func clearNodes(cfg *Config) {
 	}
 }
 
-// Функция добавления доменов в правило с xwave = true
-func addDomainsToRules(cfg *Config, newDomains []string) {
+// Функция добавления доменов в правило с xwave-domain = true
+func addDomainsToRules(cfg *Config, newDomains []string) ([]string, error) {
+	var results []string
 
-	// Если массив пустой — ничего не делаем
+	// Если массив пустой — просто логируем
 	if len(newDomains) == 0 {
-		return
+		results = append(results, "⚠️  Список добавляемых доменов пуст.")
+		return results, nil
 	}
+
+	foundXwaveRule := false
+	foundXwaveKey := false // ← встречался ли ключ вообще
 
 	for i, rule := range cfg.Routing.Rules {
 
-		// Мы ищем только правила где присутствует "xwave": "true"
-		flag, ok := rule["xwave"]
-		if !ok || flag != "true" {
+		// Проверяем наличие "xwave-domain"
+		flag, exists := rule["xwave-domain"]
+
+		if exists {
+			foundXwaveKey = true // ключ существует хотя бы в одном правиле
+		}
+
+		// Если ключа нет — продолжаем
+		if !exists {
 			continue
 		}
 
-		// Проверяем наличие поля domain
+		// Если "xwave-domain": "false" — просто игнорируем
+		if flag == "false" {
+			continue
+		}
+
+		// Работаем только с "xwave-domain": "true"
+		if flag != "true" {
+			continue
+		}
+
+		// Нашли нужное правило
+		foundXwaveRule = true
+
+		// --- Обработка доменов ---
 		if domains, ok := rule["domain"].([]interface{}); ok {
-			exist := map[string]bool{}
+
+			// проверяем дубликаты
+			existsMap := map[string]bool{}
 			for _, d := range domains {
-				exist[d.(string)] = true
+				existsMap[d.(string)] = true
 			}
 
-			// Добавляем новые домены без дубликатов
 			for _, nd := range newDomains {
-				if !exist[nd] {
+				if !existsMap[nd] {
 					domains = append(domains, nd)
+					results = append(results, fmt.Sprintf("Добавлен домен: %s", nd))
 				}
 			}
 
 			cfg.Routing.Rules[i]["domain"] = domains
 
 		} else {
-			// Поля domain нет → создаём новый массив
+			// если доменов не было — создаём новое поле
 			domains := []interface{}{}
 			for _, nd := range newDomains {
 				domains = append(domains, nd)
+				results = append(results, fmt.Sprintf("Добавлен домен: %s", nd))
 			}
 			cfg.Routing.Rules[i]["domain"] = domains
 		}
 	}
+
+	// --- ОШИБКИ ---
+
+	// Если ключ "xwave-domain" вообще отсутствует в правилах
+	if !foundXwaveKey {
+		return results, fmt.Errorf("❌ В конфигурации json ни одно правило не содержит ключа \"xwave-domain\"")
+	}
+
+	// Если ключ есть, но нет ни одного "true"
+	if !foundXwaveRule {
+		return results, fmt.Errorf("⚠️  Ключ \"xwave-domain\" найден, но значение \"true\" отсутствует — домены не добавлены")
+	}
+
+	return results, nil
 }
 
-func ModifyBalancerJson(template string, filename string, vpns []string, newDomains []string) []string {
+func ModifyBalancerJson(template string, filename string, vpns []string) []string {
 
 	var results []string
 	// Читаем файл temp_config.json
@@ -142,8 +183,6 @@ func ModifyBalancerJson(template string, filename string, vpns []string, newDoma
 
 	// Добавляем новые домены в rules
 
-	addDomainsToRules(&cfg, newDomains)
-
 	// Конвертируем обратно в JSON
 	output, err := json.MarshalIndent(cfg, "", "    ")
 	if err != nil {
@@ -156,6 +195,51 @@ func ModifyBalancerJson(template string, filename string, vpns []string, newDoma
 	}
 
 	results = append(results, fmt.Sprintf("✅ Сгенерирован новый %s", filename))
+
+	return results
+}
+
+func ModifyDomainsJson(template string, newDomains []string) []string {
+
+	var results []string
+
+	// Читаем template.json
+	data, err := os.ReadFile(template)
+	if err != nil {
+		results = append(results, fmt.Sprintf("не удалось открыть %s", template))
+		return results
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		results = append(results, fmt.Sprintf("ошибка парсинга JSON: %s", err))
+		return results
+	}
+
+	// Добавляем новые домены
+	added, err := addDomainsToRules(&cfg, newDomains)
+
+	if err != nil {
+		return []string{err.Error()}
+	}
+
+	// объединяем два массива
+	results = append(results, added...)
+
+	// Конвертируем обратно в JSON
+	output, err := json.MarshalIndent(cfg, "", "    ")
+	if err != nil {
+		results = append(results, fmt.Sprintf("ошибка сериализации JSON: %s", err))
+		return results
+	}
+
+	// Перезаписываем исходный template-файл
+	if err := os.WriteFile(template, output, 0644); err != nil {
+		results = append(results, fmt.Sprintf("не удалось записать %s", template))
+		return results
+	}
+
+	results = append(results, fmt.Sprintf("♻️ Файл %s успешно обновлён", template))
 
 	return results
 }

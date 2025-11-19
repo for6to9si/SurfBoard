@@ -235,7 +235,7 @@ func registerCallbackHandler(
 			}
 			fullpath := filepath.Join(config.XwayConf.Env.XrayLocationConfdir, "routing-settings.generated.json")
 
-			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags, nil)
+			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags)
 
 			for _, line := range results {
 				// Пропускаем пустые строки, если они есть
@@ -372,7 +372,7 @@ func registerCallbackHandler(
 			fulltempdir := filepath.Join(config.BenchmarkSettings.Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
 			fullpath := filepath.Join(config.BenchmarkSettings.Env.XrayLocationConfdir, "routing-settings.generated.json")
 
-			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, vpns, nil)
+			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, vpns)
 
 			for _, line := range results {
 				// Пропускаем пустые строки, если они есть
