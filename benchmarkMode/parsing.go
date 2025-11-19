@@ -77,8 +77,8 @@ func decodeURLComment(comment string) (string, error) {
 	return decoded, nil
 }
 
-// Parses function parses VLESS URIs and returns formatted JSON strings
-func Parses(vlessURI []string, path string) []string {
+// ParsesVpns function parses VLESS URIs and returns formatted JSON strings
+func ParsesVpns(vlessURI []string, path string) []string {
 	var results []string
 	var tags []string
 

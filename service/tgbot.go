@@ -19,12 +19,17 @@ const (
 	StateXray
 	StateSingBox
 	StateSetupApps
+	StateXrayAddDomainToFile
+	StateXrayAddDomainViaGRPC
+	StateBenchmarkAddDomainToFile
+	StateBenchmarkAddDomainViaGRPC
 )
 
 const (
-	FileRoutingBalancers = "05-routing-balancers.json"
-	FileSystemDefault    = "00-system-default.json"
-	FileXwaveConf        = "xwave-conf.json"
+	FileTmpRoutingBalancers = "!tmp_05-routing-balancers.json"
+	FileSystemDefault       = "00-system-default.json"
+	FileXwaveConf           = "xwave-conf.json"
+	FileGeneratedRouting    = "05-generated-routing-balancers.json"
 )
 
 // --- Модель пользователя ---

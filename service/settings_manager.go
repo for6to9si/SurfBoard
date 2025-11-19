@@ -82,7 +82,7 @@ func handleFileUpload(ctx context.Context, bot *telego.Bot, chatID telego.ChatID
 	if targetPath == "" {
 		bot.SendMessage(ctx, tu.Message(chatID,
 			"⚠️ Неизвестный файл. Можно заменять только:\n"+
-				"- "+FileRoutingBalancers+"\n"+
+				"- "+FileTmpRoutingBalancers+"\n"+
 				"- "+FileSystemDefault+"\n"+
 				"- "+FileXwaveConf))
 		return
@@ -126,7 +126,7 @@ func handleFileUpload(ctx context.Context, bot *telego.Bot, chatID telego.ChatID
 	// И отправляем те же кнопки, чтобы можно было сразу скачать файл
 	keyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📄 "+FileRoutingBalancers).WithCallbackData(FileRoutingBalancers),
+			tu.InlineKeyboardButton("📄 "+FileTmpRoutingBalancers).WithCallbackData(FileTmpRoutingBalancers),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⚙️ "+FileSystemDefault).WithCallbackData(FileSystemDefault),
@@ -142,13 +142,12 @@ func handleFileUpload(ctx context.Context, bot *telego.Bot, chatID telego.ChatID
 
 // === Возвращает путь для сохранения по имени файла ===
 func getTargetPath(fileName string, config *conf.Config) string {
-	template := config.XwayConf.Env.XrayLocationTemplatedir
 
 	switch fileName {
-	case FileRoutingBalancers:
-		return path.Join(template, "05-routing-balancers.json")
+	case FileTmpRoutingBalancers:
+		return path.Join(config.XwayConf.Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
 	case FileSystemDefault:
-		return path.Join(template, "00-system-default.json")
+		return path.Join(config.XwayConf.Env.XrayLocationConfdir, FileSystemDefault)
 	case FileXwaveConf:
 		return "/opt/etc/xwave/xwave-conf.json"
 	default:

@@ -161,6 +161,7 @@ func registerCallbackHandler(
 			)))
 
 		case "xray_add_domains":
+			user.State = StateXrayAddDomainToFile
 			msg := tu.Message(
 				tu.ID(query.Message.GetChat().ID),
 				"Введите домены в одном из форматов:\n\n"+
@@ -223,12 +224,12 @@ func registerCallbackHandler(
 				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
 			}
 
-			fulltempdir := filepath.Join(config.XwayConf.Env.XrayLocationTemplatedir, "05-routing-balancers.json")
+			fulltempdir := filepath.Join(config.XwayConf.Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
 
 			// Проверяем, существует ли файл
 			if _, err := os.Stat(fulltempdir); os.IsNotExist(err) {
 				// Файл не найден — отправляем сообщение в Telegram
-				strTmp := "❗ Файл 05-routing-balancers.json не найден в шаблонах!"
+				strTmp := fmt.Sprintf("❗ Файл %s не найден в шаблонах!", FileTmpRoutingBalancers)
 				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), strTmp))
 				break
 			}
@@ -291,7 +292,7 @@ func registerCallbackHandler(
 					tu.InlineKeyboardButton("⚙️ " + FileSystemDefault).WithCallbackData(FileSystemDefault),
 				),
 				tu.InlineKeyboardRow(
-					tu.InlineKeyboardButton("📄 " + FileRoutingBalancers).WithCallbackData(FileRoutingBalancers),
+					tu.InlineKeyboardButton("📄 " + FileTmpRoutingBalancers).WithCallbackData(FileTmpRoutingBalancers),
 				),
 			}
 
@@ -368,7 +369,7 @@ func registerCallbackHandler(
 			}
 
 			// Формируем полный путь к файлу
-			fulltempdir := filepath.Join(config.BenchmarkSettings.Env.XrayLocationTemplatedir, "routing-settings.generated.json")
+			fulltempdir := filepath.Join(config.BenchmarkSettings.Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
 			fullpath := filepath.Join(config.BenchmarkSettings.Env.XrayLocationConfdir, "routing-settings.generated.json")
 
 			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, vpns, nil)
@@ -398,6 +399,30 @@ func registerCallbackHandler(
 			).WithReplyMarkup(&telego.InlineKeyboardMarkup{
 				InlineKeyboard: createBenchmarkKeyboard(loc, benchmarkMode.IsXrayRunning()),
 			}))
+
+		case "benchmark_add_domains":
+			user.State = StateBenchmarkAddDomainToFile
+			msg := tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Введите домены в одном из форматов:\n\n"+
+					"Через запятую:\n"+
+					"ti.com, analog.com, qualcomm.com\n\n"+
+					"Или столбиком:\n"+
+					"altera.com\n"+
+					"intel.com\n"+
+					"nvidia.com\n\n"+
+					"Также можно использовать готовые доменные группы (geosite) из проекта v2fly.\n"+
+					"Список доступных наборов:\n"+
+					"https://github.com/v2fly/domain-list-community/tree/master/data\n"+
+					"Некоторые примеры готовых доменных групп:\n"+
+					"ext:geosite_v2fly.dat:intel\n"+
+					"ext:geosite_v2fly.dat:qualcomm\n"+
+					"ext:geosite_v2fly.dat:category-dev\n"+
+					"ext:geosite_v2fly.dat:google-gemini\n\n"+
+					"Просто скопируйте нужные группы и используйте их вместо отдельных доменов.")
+			msg.LinkPreviewOptions = &telego.LinkPreviewOptions{IsDisabled: true}
+			bot.SendMessage(ctx, msg)
+
 		case "fast_vpn_test":
 			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
 				return err
@@ -505,6 +530,7 @@ func createBenchmarkKeyboard(loc *i18n.Localizer, isXrayRunning bool) [][]telego
 		{tu.InlineKeyboardButton(buttonText).WithCallbackData(buttonData)},
 		{tu.InlineKeyboardButton(allVPNs).WithCallbackData("benchmark_all_vpns")},
 		{tu.InlineKeyboardButton(currentVPN).WithCallbackData("benchmark_current_vpn")},
+		{tu.InlineKeyboardButton("Добавить домен").WithCallbackData("benchmark_add_domains")},
 		{tu.InlineKeyboardButton(addVPN).WithCallbackData("benchmark_add_vpn")},
 		{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
 		{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},
