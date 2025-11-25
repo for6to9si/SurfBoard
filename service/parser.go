@@ -238,11 +238,32 @@ func handleDomainState(
 
 	results := benchmarkMode.ModifyDomainsJson(fullpath, all)
 
-	for _, line := range results {
-		// Пропускаем пустые строки, если они есть
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
+	//for _, line := range results {
+	//	// Пропускаем пустые строки, если они есть
+	//	if strings.TrimSpace(line) == "" {
+	//		continue
+	//	}
+	//	_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
+	//}
+
+	// Создаем массив рядов клавиатуры
+	rows := [][]telego.InlineKeyboardButton{
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚙️ " + FileSystemDefault).WithCallbackData(FileSystemDefault),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("📄 " + FileTmpRoutingBalancers).WithCallbackData(FileTmpRoutingBalancers),
+		),
 	}
+
+	// Редактируем сообщение безопасно
+	_, _ = ctx.Bot().EditMessageText(ctx, &telego.EditMessageTextParams{
+		ChatID:      tu.ID(message.GetChat().ID),
+		MessageID:   message.GetMessageID(),
+		Text:        strings.Join(results, "\n"),
+		ParseMode:   telego.ModeMarkdown,
+		ReplyMarkup: tu.InlineKeyboard(rows...),
+	})
+	// Отвечаем на callback, чтобы убрать "часики"
+
 }
