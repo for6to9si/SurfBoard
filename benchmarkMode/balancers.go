@@ -66,51 +66,33 @@ func clearNodes(cfg *Config) {
 func addDomainsToRules(cfg *Config, newDomains []string) ([]string, error) {
 	var results []string
 
-	// Если массив пустой — просто логируем
+	// Проверка: пустой массив доменов
 	if len(newDomains) == 0 {
-		results = append(results, "⚠️  Список добавляемых доменов пуст.")
-		return results, nil
+		return []string{"⚠️  Список добавляемых доменов пуст."}, nil
 	}
 
-	foundXwaveRule := false
-	foundXwaveKey := false // ← встречался ли ключ вообще
+	foundRuleTag := false
 
 	for i, rule := range cfg.Routing.Rules {
 
-		// Проверяем наличие "xwave-domain"
-		flag, exists := rule["xwave-domain"]
-
-		if exists {
-			foundXwaveKey = true // ключ существует хотя бы в одном правиле
-		}
-
-		// Если ключа нет — продолжаем
-		if !exists {
+		// Ищем правило где "ruleTag": "xwave-domains"
+		tag, exists := rule["ruleTag"]
+		if !exists || tag != "xwave-domains" {
 			continue
 		}
 
-		// Если "xwave-domain": "false" — просто игнорируем
-		if flag == "false" {
-			continue
-		}
+		foundRuleTag = true
 
-		// Работаем только с "xwave-domain": "true"
-		if flag != "true" {
-			continue
-		}
-
-		// Нашли нужное правило
-		foundXwaveRule = true
-
-		// --- Обработка доменов ---
+		// Проверяем наличие domain
 		if domains, ok := rule["domain"].([]interface{}); ok {
 
-			// проверяем дубликаты
+			// создаём map для защиты от дубликатов
 			existsMap := map[string]bool{}
 			for _, d := range domains {
 				existsMap[d.(string)] = true
 			}
 
+			// добавляем недостающие домены
 			for _, nd := range newDomains {
 				if !existsMap[nd] {
 					domains = append(domains, nd)
@@ -121,26 +103,21 @@ func addDomainsToRules(cfg *Config, newDomains []string) ([]string, error) {
 			cfg.Routing.Rules[i]["domain"] = domains
 
 		} else {
-			// если доменов не было — создаём новое поле
-			domains := []interface{}{}
+
+			// Поля domain нет — создаём новое
+			newList := []interface{}{}
 			for _, nd := range newDomains {
-				domains = append(domains, nd)
+				newList = append(newList, nd)
 				results = append(results, fmt.Sprintf("Добавлен домен: %s", nd))
 			}
-			cfg.Routing.Rules[i]["domain"] = domains
+
+			cfg.Routing.Rules[i]["domain"] = newList
 		}
 	}
 
-	// --- ОШИБКИ ---
-
-	// Если ключ "xwave-domain" вообще отсутствует в правилах
-	if !foundXwaveKey {
-		return results, fmt.Errorf("❌ В конфигурации json ни одно правило не содержит ключа \"xwave-domain\"")
-	}
-
-	// Если ключ есть, но нет ни одного "true"
-	if !foundXwaveRule {
-		return results, fmt.Errorf("⚠️  Ключ \"xwave-domain\" найден, но значение \"true\" отсутствует — домены не добавлены")
+	// Ошибка: ни одного правила не найдено
+	if !foundRuleTag {
+		return results, fmt.Errorf("❌ В конфигурации нет правил с \"ruleTag\": \"xwave-domains\" — домены не добавлены")
 	}
 
 	return results, nil

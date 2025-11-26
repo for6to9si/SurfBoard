@@ -90,6 +90,7 @@ func registerCallbackHandler(
 			// Отображаем скрытые кнопки
 
 			user.State = StateSetupApps
+			user.Domainlist = nil
 
 			programs := installer.GetLocalVersion(config.Installer.Programs)
 
@@ -138,9 +139,6 @@ func registerCallbackHandler(
 				// если не удалось отредактировать — fallback на SendMessage
 				_, _ = ctx.Bot().SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "📦 Applications:").WithReplyMarkup(tu.InlineKeyboard(rows...)))
 			}
-
-			// всегда отвечаем на callback, чтобы убрать "часики"
-			_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
 
 		case "xray_vpn":
 			// Отображаем скрытые кнопки
@@ -421,7 +419,8 @@ func registerCallbackHandler(
 					"ext:geosite_v2fly.dat:google-gemini\n\n"+
 					"Просто скопируйте нужные группы и используйте их вместо отдельных доменов.")
 			msg.LinkPreviewOptions = &telego.LinkPreviewOptions{IsDisabled: true}
-			bot.SendMessage(ctx, msg)
+			sent, _ := bot.SendMessage(ctx, msg)
+			user.LastBotMsgID = sent.GetMessageID()
 
 		case "fast_vpn_test":
 			if err := handleFastVPNTest(ctx, query, bot, allVPNs, addVPN); err != nil {
@@ -434,17 +433,52 @@ func registerCallbackHandler(
 		case "benchmark_add_vpn":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(benchmarkclient)))
 
+		case "save_routing_file":
+
+			if len(user.Domainlist) > 0 {
+				var confDir string
+				switch user.State {
+				case StateXrayAddDomainToFile:
+					confDir = config.XwayConf.Env.XrayLocationTemplatedir
+
+				case StateBenchmarkAddDomainToFile:
+					confDir = config.BenchmarkSettings.Env.XrayLocationTemplatedir
+				default:
+					_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), "Ошибка на выборе файла маршрута"))
+				}
+				// Формируем полный путь к файлу
+				fullpath := filepath.Join(confDir, FileTmpRoutingBalancers)
+
+				results := benchmarkMode.ModifyDomainsJson(fullpath, user.Domainlist) //тут добавляем домены в файл
+				//for _, line := range results {
+				//	// Пропускаем пустые строки, если они есть
+				//	if strings.TrimSpace(line) == "" {
+				//		continue
+				//	}
+				//	_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), line))
+				//}
+				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), strings.Join(results, "\n")))
+
+			} else {
+				_, _ = bot.SendMessage(ctx, tu.Message(
+					tu.ID(query.Message.GetChat().ID),
+					underDevelopment,
+				).WithReplyMarkup(tu.InlineKeyboard(
+					tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
+				)))
+			}
+
 		case "back_to_main":
 			// Возвращаемся к начальному меню
 			user.State = StateDefault
+			user.Domainlist = nil
+
 			inlineKeyboard := mainMenu(config)
 			_, _ = bot.SendMessage(ctx, tu.Message(
 				tu.ID(query.Message.GetChat().ID),
 				"Вы вернулись в главное меню.",
 			).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
 
-		default:
-			_ = bot.AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
 		}
 
 		//if query.Data == "/getfile" {
@@ -454,6 +488,9 @@ func registerCallbackHandler(
 		//}
 		// === Callback от кнопок ===
 		handleCallback(ctx, bot, &query, config)
+
+		// всегда отвечаем на callback, чтобы убрать "часики"
+		_ = ctx.Bot().AnswerCallbackQuery(ctx, tu.CallbackQuery(query.ID))
 
 		return nil
 	}, th.AnyCallbackQueryWithMessage())

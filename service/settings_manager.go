@@ -49,7 +49,7 @@ func registerFilesHandler(
 	}, th.AnyMessageWithMedia())
 }
 
-// === Обработка callback от кнопок ===
+// === Обработка callback от кнопок файлов===
 func handleCallback(ctx context.Context, bot *telego.Bot, cq *telego.CallbackQuery, config *conf.Config) {
 	chatID := cq.Message.GetChat().ChatID()
 	fileName := cq.Data

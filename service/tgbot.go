@@ -34,7 +34,9 @@ const (
 
 // --- Модель пользователя ---
 type User struct {
-	State State
+	State        State
+	LastBotMsgID int
+	Domainlist   []string
 }
 
 var user User

@@ -6,8 +6,8 @@ import (
 	"SurfBoard/grpcClient"
 	"SurfBoard/locale"
 	"fmt"
+	"log"
 	"net/url"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -165,9 +165,25 @@ func ExtractOne(raw string) []string {
 		return nil
 	}
 
-	// 1️⃣ Если начинается с domain: — оставить как есть
+	// 0️⃣ Формат: 0: "domain.com"
+	// проверяем: начинается с цифры, двоеточие, кавычка
+	if idx := strings.Index(raw, ":"); idx > 0 {
+		if raw[0] >= '0' && raw[0] <= '9' {
+			// пример: 0: "mail.google.com"
+			parts := strings.SplitN(raw, ":", 2)
+			if len(parts) == 2 {
+				val := strings.TrimSpace(parts[1]) // "mail.google.com"
+				val = strings.Trim(val, "\"")      // mail.google.com
+				if strings.Contains(val, ".") {
+					return []string{"domain:" + val}
+				}
+			}
+		}
+	}
+
+	// 1️⃣ Если начинается с domain:
 	if strings.HasPrefix(raw, "domain:") {
-		return []string{raw}
+		return []string{"domain:" + raw}
 	}
 
 	// 2️⃣ Если начинается с ext: — оставить как есть
@@ -175,21 +191,26 @@ func ExtractOne(raw string) []string {
 		return []string{raw}
 	}
 
-	// 3️⃣ Если это URL — извлечь домен
+	// 3️⃣ Формат geosite без ext: (geosite_v2fly.dat:vmware)
+	if strings.Contains(raw, ".dat:") {
+		return []string{raw}
+	}
+
+	// 4️⃣ Если это URL → извлечь домен
 	if parsed, err := url.Parse(raw); err == nil && parsed.Host != "" {
 		host := parsed.Host
 		// убираем порт
 		host = strings.Split(host, ":")[0]
-		return []string{host}
+		return []string{"domain:" + host}
 	}
 
 	// 4️⃣ Если это доменное имя (без схемы)
 	if strings.Contains(raw, ".") {
-		raw = strings.Split(raw, ":")[0] // убрать порт
-		return []string{raw}
+		raw = strings.Split(raw, ":")[0] // убрать порт (если вдруг)
+		return []string{"domain:" + raw}
 	}
 
-	// 5️⃣ Иначе — игнорировать
+	// 6️⃣ Ничего не подошло — игнорируем
 	return nil
 }
 
@@ -226,44 +247,74 @@ func handleDomainState(
 	client *grpcClient.GRpcClient,
 	confDir string,
 ) {
-	var all []string
+	var domains []string
 
 	lines := strings.Split(message.Text, "\n")
 	for _, line := range lines {
-		all = append(all, ExtractDomainsAll(line)...)
+		domains = append(domains, ExtractDomainsAll(line)...)
 	}
 
-	// Формируем полный путь к файлу
-	fullpath := filepath.Join(confDir, FileTmpRoutingBalancers)
+	if user.Domainlist == nil || len(user.Domainlist) == 0 {
+		str := []string{
+			"Продолжает работать некорректно?",
+			"Откройте консоль браузера:",
+			"1. На проблемной странице нажмите клавишу F12",
+			"2. Или кликните правой кнопкой мыши → «Посмотреть код» → вкладка «Console»",
+			"3. Скопируйте и вставьте эту команду в консоль, затем нажмите Enter:",
+			"<code>[...new Set(performance.getEntriesByType('resource').map(r => (new URL(r.name)).hostname))]</code>",
+			"Результат покажет все серверы, к которым обращался сайт.",
+		}
 
-	results := benchmarkMode.ModifyDomainsJson(fullpath, all)
+		msg := tu.Message(
+			message.Chat.ChatID(),
+			strings.Join(str, "\n"),
+		)
 
-	//for _, line := range results {
-	//	// Пропускаем пустые строки, если они есть
-	//	if strings.TrimSpace(line) == "" {
-	//		continue
-	//	}
-	//	_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), line))
-	//}
+		msg.ParseMode = telego.ModeHTML
+
+		_, _ = bot.SendMessage(ctx, msg)
+	}
+
+	user.Domainlist = append(user.Domainlist, domains...)
+
+	results := []string{}
+
+	results = append(results, "Полный список доменов:")
+	results = append(results, user.Domainlist...) // распаковка слайса
 
 	// Создаем массив рядов клавиатуры
 	rows := [][]telego.InlineKeyboardButton{
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("⚙️ " + FileSystemDefault).WithCallbackData(FileSystemDefault),
+			tu.InlineKeyboardButton("📄 Сохранить в файле:" + FileTmpRoutingBalancers).WithCallbackData("save_routing_file"),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("📄 " + FileTmpRoutingBalancers).WithCallbackData(FileTmpRoutingBalancers),
+			tu.InlineKeyboardButton("⚙️ " + FileSystemDefault).WithCallbackData(FileSystemDefault),
 		),
 	}
 
-	// Редактируем сообщение безопасно
-	_, _ = ctx.Bot().EditMessageText(ctx, &telego.EditMessageTextParams{
-		ChatID:      tu.ID(message.GetChat().ID),
-		MessageID:   message.GetMessageID(),
+	// Попытка удалить сообщение бота (если есть saved ID)
+	if user.LastBotMsgID != 0 {
+		if err := bot.DeleteMessage(ctx, &telego.DeleteMessageParams{
+			ChatID:    tu.ID(message.Chat.ID),
+			MessageID: user.LastBotMsgID,
+		}); err != nil {
+			log.Printf("failed to delete prompt message (id=%d): %v", user.LastBotMsgID, err)
+			// не прерываем — всё равно отправим ответ бота
+		} else {
+			// успешно удалили — можно обнулить
+			user.LastBotMsgID = 0
+			// persist user если нужно
+		}
+	}
+
+	// Отправляем новое сообщение бота
+	sent, _ := bot.SendMessage(ctx, &telego.SendMessageParams{
+		ChatID:      tu.ID(message.Chat.ID),
 		Text:        strings.Join(results, "\n"),
-		ParseMode:   telego.ModeMarkdown,
+		ParseMode:   telego.ModeHTML,
 		ReplyMarkup: tu.InlineKeyboard(rows...),
 	})
-	// Отвечаем на callback, чтобы убрать "часики"
+
+	user.LastBotMsgID = sent.GetMessageID()
 
 }
