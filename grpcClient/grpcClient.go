@@ -1,15 +1,21 @@
 package grpcClient
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"SurfBoard/conf"
 
+	routerService "github.com/xtls/xray-core/app/router/command"
+	cserial "github.com/xtls/xray-core/common/serial"
+	"github.com/xtls/xray-core/infra/conf/serial"
+	"github.com/xtls/xray-core/main/commands/base"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -158,4 +164,66 @@ func OverrideBalancerTarget(c *GRpcClient, balancerTag, target string) string {
 	}
 
 	return fmt.Sprintf("✅ Балансер %q переопределён на %q\nОтвет: %+v", balancerTag, target, resp)
+}
+
+// ListVPNStatuses возвращает статус всех Outbound-соединений
+func (c *GRpcClient) AddDomainsRules(fullpath string) string {
+
+	//client := routerService.NewRoutingServiceClient(c.conn)
+	//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	//defer cancel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	conn, err := grpc.DialContext(ctx, c.address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+
+	if c.conn == nil {
+		log.Printf("Xray: соединение не инициализировано")
+		return "⚠️ Соединение не инициализировано"
+	}
+
+	if err != nil {
+		base.Fatalf("failed to dial %s", c.address)
+	}
+	close := func() {
+		cancel()
+		conn.Close()
+	}
+
+	defer close()
+
+	client := routerService.NewRoutingServiceClient(conn)
+
+	// Читаем FileTmpRoutingBalancers
+	data, err := os.ReadFile(fullpath)
+	if err != nil {
+		return fmt.Sprintf("не удалось открыть %s", fullpath)
+	}
+
+	conf, err := serial.DecodeJSONConfig(bytes.NewBuffer(data))
+
+	if err != nil {
+		return fmt.Sprintf("не удалось декодировать json %s: %s", data, err)
+	}
+
+	rcs := *conf.RouterConfig
+
+	config, err := rcs.Build()
+	if err != nil {
+		return fmt.Sprintf("failed to build conf: %s", err)
+	}
+	tmsg := cserial.ToTypedMessage(config)
+	if tmsg == nil {
+		base.Fatalf("failed to format config to TypedMessage.")
+	}
+
+	ra := &routerService.AddRuleRequest{
+		Config:       tmsg,
+		ShouldAppend: false,
+	}
+	_, err = client.AddRule(ctx, ra)
+	if err != nil {
+		base.Fatalf("failed to perform AddRule: %s", err)
+	}
+
+	return ""
 }

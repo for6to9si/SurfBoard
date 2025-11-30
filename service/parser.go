@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -281,6 +282,8 @@ func handleDomainState(
 
 	results = append(results, "Полный список доменов:")
 	results = append(results, user.Domainlist...) // распаковка слайса
+
+	client.AddDomainsRules(filepath.Join(confDir, FileTmpRoutingBalancers))
 
 	// Создаем массив рядов клавиатуры
 	rows := [][]telego.InlineKeyboardButton{
