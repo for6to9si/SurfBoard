@@ -14,6 +14,8 @@ import (
 
 	routerService "github.com/xtls/xray-core/app/router/command"
 	cserial "github.com/xtls/xray-core/common/serial"
+
+	pbcf "github.com/xtls/xray-core/infra/conf"
 	"github.com/xtls/xray-core/infra/conf/serial"
 	"github.com/xtls/xray-core/main/commands/base"
 	"google.golang.org/grpc"
@@ -169,20 +171,10 @@ func OverrideBalancerTarget(c *GRpcClient, balancerTag, target string) string {
 // ListVPNStatuses возвращает статус всех Outbound-соединений
 func (c *GRpcClient) AddDomainsRules(fullpath string) string {
 
-	//client := routerService.NewRoutingServiceClient(c.conn)
-	//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	//defer cancel()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	conn, err := grpc.DialContext(ctx, c.address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
-
-	if c.conn == nil {
-		log.Printf("Xray: соединение не инициализировано")
-		return "⚠️ Соединение не инициализировано"
-	}
-
+	conn, err := grpc.DialContext(ctx, "localhost:10085", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
-		base.Fatalf("failed to dial %s", c.address)
+		base.Fatalf("failed to dial %s", "c.address")
 	}
 	close := func() {
 		cancel()
@@ -205,25 +197,33 @@ func (c *GRpcClient) AddDomainsRules(fullpath string) string {
 		return fmt.Sprintf("не удалось декодировать json %s: %s", data, err)
 	}
 
-	rcs := *conf.RouterConfig
+	rcs := make([]pbcf.RouterConfig, 0)
+	rcs = append(rcs, *conf.RouterConfig)
 
-	config, err := rcs.Build()
-	if err != nil {
-		return fmt.Sprintf("failed to build conf: %s", err)
+	if len(rcs) == 0 {
+		fmt.Printf("no valid rule found in config")
 	}
-	tmsg := cserial.ToTypedMessage(config)
-	if tmsg == nil {
-		base.Fatalf("failed to format config to TypedMessage.")
+	for _, in := range rcs {
+
+		config, err := in.Build()
+		if err != nil {
+			fmt.Printf("failed to build conf: %s", err)
+		}
+		tmsg := cserial.ToTypedMessage(config)
+		if tmsg == nil {
+			fmt.Printf("failed to format config to TypedMessage.")
+		}
+
+		ra := &routerService.AddRuleRequest{
+			Config:       tmsg,
+			ShouldAppend: false,
+		}
+		resp, err := client.AddRule(ctx, ra)
+		if err != nil {
+			fmt.Printf("failed to perform AddRule: %s", err)
+		}
+		fmt.Printf("resp: %s", resp)
 	}
 
-	ra := &routerService.AddRuleRequest{
-		Config:       tmsg,
-		ShouldAppend: false,
-	}
-	_, err = client.AddRule(ctx, ra)
-	if err != nil {
-		base.Fatalf("failed to perform AddRule: %s", err)
-	}
-
-	return ""
+	return "✅ Rule успешно добавлено"
 }
