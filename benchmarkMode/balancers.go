@@ -176,7 +176,7 @@ func ModifyBalancerJson(template string, filename string, vpns []string) []strin
 	return results
 }
 
-func ModifyDomainsJson(template string, newDomains []string) []string {
+func ModifyDomains(template string, newDomains []string) []string {
 
 	var results []string
 
@@ -219,4 +219,39 @@ func ModifyDomainsJson(template string, newDomains []string) []string {
 	results = append(results, fmt.Sprintf("♻️ Файл %s успешно обновлён", template))
 
 	return results
+}
+
+func ModifyDomainsJson(template string, newDomains []string) []byte {
+
+	var results []string
+
+	// Читаем template.json
+	data, err := os.ReadFile(template)
+	if err != nil {
+		results = append(results, fmt.Sprintf("не удалось открыть %s", template))
+
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		results = append(results, fmt.Sprintf("ошибка парсинга JSON: %s", err))
+	}
+
+	// Добавляем новые домены
+	added, err := addDomainsToRules(&cfg, newDomains)
+
+	if err != nil {
+		results = append(results, []string{err.Error()}...)
+	}
+
+	// объединяем два массива
+	results = append(results, added...)
+
+	// Конвертируем обратно в JSON
+	output, err := json.MarshalIndent(cfg, "", "    ")
+	if err != nil {
+		results = append(results, fmt.Sprintf("ошибка сериализации JSON: %s", err))
+	}
+
+	return output
 }

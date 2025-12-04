@@ -1,11 +1,11 @@
 package grpcClient
 
 import (
+	"SurfBoard/benchmarkMode"
 	"bytes"
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -17,7 +17,6 @@ import (
 
 	pbcf "github.com/xtls/xray-core/infra/conf"
 	"github.com/xtls/xray-core/infra/conf/serial"
-	"github.com/xtls/xray-core/main/commands/base"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -169,49 +168,37 @@ func OverrideBalancerTarget(c *GRpcClient, balancerTag, target string) string {
 }
 
 // ListVPNStatuses возвращает статус всех Outbound-соединений
-func (c *GRpcClient) AddDomainsRules(fullpath string) string {
+func (c *GRpcClient) AddDomainsRules(fullpath string, domainlist []string) []string {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	conn, err := grpc.DialContext(ctx, "localhost:10085", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
-	if err != nil {
-		base.Fatalf("failed to dial %s", "c.address")
-	}
-	close := func() {
-		cancel()
-		conn.Close()
-	}
+	var results []string
 
-	defer close()
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 
-	client := routerService.NewRoutingServiceClient(conn)
+	client := routerService.NewRoutingServiceClient(c.conn)
 
-	// Читаем FileTmpRoutingBalancers
-	data, err := os.ReadFile(fullpath)
-	if err != nil {
-		return fmt.Sprintf("не удалось открыть %s", fullpath)
-	}
+	output := benchmarkMode.ModifyDomainsJson(fullpath, domainlist)
 
-	conf, err := serial.DecodeJSONConfig(bytes.NewBuffer(data))
+	conf, err := serial.DecodeJSONConfig(bytes.NewBuffer(output))
 
 	if err != nil {
-		return fmt.Sprintf("не удалось декодировать json %s: %s", data, err)
+		results = append(results, fmt.Sprintf("не удалось декодировать json %s: %s", output, err))
 	}
 
 	rcs := make([]pbcf.RouterConfig, 0)
 	rcs = append(rcs, *conf.RouterConfig)
 
 	if len(rcs) == 0 {
-		fmt.Printf("no valid rule found in config")
+		results = append(results, fmt.Sprintf("no valid rule found in config"))
 	}
 	for _, in := range rcs {
 
 		config, err := in.Build()
 		if err != nil {
-			fmt.Printf("failed to build conf: %s", err)
+			results = append(results, fmt.Sprintf("failed to build conf: %s", err))
 		}
 		tmsg := cserial.ToTypedMessage(config)
 		if tmsg == nil {
-			fmt.Printf("failed to format config to TypedMessage.")
+			results = append(results, fmt.Sprintf("failed to format config to TypedMessage."))
 		}
 
 		ra := &routerService.AddRuleRequest{
@@ -220,10 +207,12 @@ func (c *GRpcClient) AddDomainsRules(fullpath string) string {
 		}
 		resp, err := client.AddRule(ctx, ra)
 		if err != nil {
-			fmt.Printf("failed to perform AddRule: %s", err)
+			results = append(results, fmt.Sprintf("failed to perform AddRule: %s", err))
 		}
-		fmt.Printf("resp: %s", resp)
+		results = append(results, fmt.Sprintf("resp: %s", resp))
 	}
 
-	return "✅ Rule успешно добавлено"
+	results = append(results, fmt.Sprintf("✅ Rule успешно добавлено"))
+
+	return results
 }

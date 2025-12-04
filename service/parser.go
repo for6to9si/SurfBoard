@@ -184,7 +184,7 @@ func ExtractOne(raw string) []string {
 
 	// 1️⃣ Если начинается с domain:
 	if strings.HasPrefix(raw, "domain:") {
-		return []string{"domain:" + raw}
+		return []string{raw}
 	}
 
 	// 2️⃣ Если начинается с ext: — оставить как есть
@@ -283,7 +283,7 @@ func handleDomainState(
 	results = append(results, "Полный список доменов:")
 	results = append(results, user.Domainlist...) // распаковка слайса
 
-	client.AddDomainsRules(filepath.Join(confDir, FileTmpRoutingBalancers))
+	results = append(results, client.AddDomainsRules(filepath.Join(confDir, FileTmpRoutingBalancers), user.Domainlist)...)
 
 	// Создаем массив рядов клавиатуры
 	rows := [][]telego.InlineKeyboardButton{

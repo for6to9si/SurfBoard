@@ -449,7 +449,7 @@ func registerCallbackHandler(
 				// Формируем полный путь к файлу
 				fullpath := filepath.Join(confDir, FileTmpRoutingBalancers)
 
-				results := benchmarkMode.ModifyDomainsJson(fullpath, user.Domainlist) //тут добавляем домены в файл
+				results := benchmarkMode.ModifyDomains(fullpath, user.Domainlist) //тут добавляем домены в файл
 				//for _, line := range results {
 				//	// Пропускаем пустые строки, если они есть
 				//	if strings.TrimSpace(line) == "" {
