@@ -6,6 +6,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -13,7 +16,9 @@ import (
 	"SurfBoard/conf"
 
 	routerService "github.com/xtls/xray-core/app/router/command"
+	creflect "github.com/xtls/xray-core/common/reflect"
 	cserial "github.com/xtls/xray-core/common/serial"
+	"google.golang.org/protobuf/proto"
 
 	pbcf "github.com/xtls/xray-core/infra/conf"
 	"github.com/xtls/xray-core/infra/conf/serial"
@@ -168,9 +173,13 @@ func OverrideBalancerTarget(c *GRpcClient, balancerTag, target string) string {
 }
 
 // ListVPNStatuses возвращает статус всех Outbound-соединений
-func (c *GRpcClient) AddDomainsRules(fullpath string, domainlist []string) []string {
+func (c *GRpcClient) AddDomainsRules(Env conf.Env, FileTmpRoutingBalancers string, domainlist []string) []string {
 
 	var results []string
+
+	fullpath := filepath.Join(Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
+
+	ensureXrayAssetLocation(Env)
 
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 
@@ -208,11 +217,43 @@ func (c *GRpcClient) AddDomainsRules(fullpath string, domainlist []string) []str
 		resp, err := client.AddRule(ctx, ra)
 		if err != nil {
 			results = append(results, fmt.Sprintf("failed to perform AddRule: %s", err))
+			results = append(results, fmt.Sprintf("🔄 Xray нужен рестарт | 👻 API призрачно испустил дух"))
 		}
-		results = append(results, fmt.Sprintf("resp: %s", resp))
+
+		results = append(results, showJSONResponse(resp))
+
 	}
 
-	results = append(results, fmt.Sprintf("✅ Rule успешно добавлено"))
-
 	return results
+}
+
+func ensureXrayAssetLocation(Env conf.Env) {
+	const envName = "XRAY_LOCATION_ASSET"
+	defaultPath := Env.XrayLocationAsset
+
+	if os.Getenv(envName) == "" {
+		// Можно убедиться, что путь существует (по желанию)
+		if _, err := os.Stat(defaultPath); err == nil {
+			_ = os.Setenv(envName, defaultPath)
+		}
+	}
+}
+
+func showJSONResponse(m proto.Message) string {
+	if isNil(m) {
+		return "ничего"
+	}
+	if j, ok := creflect.MarshalToJson(m, true); ok {
+		return fmt.Sprintf(j)
+	} else {
+		return fmt.Sprintln(os.Stdout, "%v\n", m)
+	}
+}
+
+func isNil(i interface{}) bool {
+	vi := reflect.ValueOf(i)
+	if vi.Kind() == reflect.Ptr {
+		return vi.IsNil()
+	}
+	return i == nil
 }

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -58,19 +57,19 @@ func registerParserkHandler(
 			text = "не выбрано"
 		case StateBenchmark:
 			text = "Thanks for your data!"
-			handleVPNState(ctx, message, bot, benchmarkclient, config.BenchmarkSettings.Env.XrayLocationConfdir)
+			handleVPNState(ctx, message, bot, benchmarkclient, config.BenchmarkSettings.Env)
 
 		case StateXray:
 			text = "StateXray!"
-			handleVPNState(ctx, message, bot, xraygRpcclient, config.XwayConf.Env.XrayLocationConfdir)
+			handleVPNState(ctx, message, bot, xraygRpcclient, config.XwayConf.Env)
 
 		case StateXrayAddDomainToFile:
 			text = "StateXrayAddDomainToFile!"
-			handleDomainState(ctx, message, bot, xraygRpcclient, config.XwayConf.Env.XrayLocationTemplatedir)
+			handleDomainState(ctx, message, bot, xraygRpcclient, config.XwayConf.Env)
 
 		case StateBenchmarkAddDomainToFile:
 			text = "StateBenchmarkAddDomainToFile!"
-			handleDomainState(ctx, message, bot, benchmarkclient, config.BenchmarkSettings.Env.XrayLocationTemplatedir)
+			handleDomainState(ctx, message, bot, benchmarkclient, config.BenchmarkSettings.Env)
 		case StateSingBox:
 			text = "StateSingBox!"
 
@@ -93,7 +92,7 @@ func handleVPNState(
 	message telego.Message,
 	bot *telego.Bot,
 	client *grpcClient.GRpcClient,
-	confDir string,
+	Env conf.Env,
 ) {
 	lines := strings.Split(message.Text, "\n")
 	trimmedText := strings.TrimSpace(message.Text)
@@ -148,7 +147,7 @@ func handleVPNState(
 		}
 	}
 
-	tags := benchmarkMode.ParsesVpns(filteredLines, confDir) //обратка vless://..., ss://..
+	tags := benchmarkMode.ParsesVpns(filteredLines, Env.XrayLocationConfdir) //обратка vless://..., ss://..
 
 	for _, line := range tags {
 		if strings.TrimSpace(line) == "" {
@@ -246,7 +245,7 @@ func handleDomainState(
 	message telego.Message,
 	bot *telego.Bot,
 	client *grpcClient.GRpcClient,
-	confDir string,
+	Env conf.Env,
 ) {
 	var domains []string
 
@@ -283,7 +282,7 @@ func handleDomainState(
 	results = append(results, "Полный список доменов:")
 	results = append(results, user.Domainlist...) // распаковка слайса
 
-	results = append(results, client.AddDomainsRules(filepath.Join(confDir, FileTmpRoutingBalancers), user.Domainlist)...)
+	results = append(results, client.AddDomainsRules(Env, FileTmpRoutingBalancers, user.Domainlist)...)
 
 	// Создаем массив рядов клавиатуры
 	rows := [][]telego.InlineKeyboardButton{
@@ -292,6 +291,9 @@ func handleDomainState(
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⚙️ " + FileSystemDefault).WithCallbackData(FileSystemDefault),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main"), //benchmark_vpn or xray_vpn
 		),
 	}
 
