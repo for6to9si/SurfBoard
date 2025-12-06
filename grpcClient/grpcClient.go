@@ -179,15 +179,21 @@ func (c *GRpcClient) AddDomainsRules(Env conf.Env, FileTmpRoutingBalancers strin
 
 	fullpath := filepath.Join(Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
 
+	start := time.Now()
 	ensureXrayAssetLocation(Env)
+	log.Printf("ensureXrayAssetLocation: %s\n", time.Since(start))
 
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-
+	start = time.Now()
 	client := routerService.NewRoutingServiceClient(c.conn)
+	log.Printf("NewRoutingServiceClient: %s\n", time.Since(start))
 
+	start = time.Now()
 	output := benchmarkMode.ModifyDomainsJson(fullpath, domainlist)
+	log.Printf("ModifyDomainsJson: %s\n", time.Since(start))
 
+	start = time.Now()
 	conf, err := serial.DecodeJSONConfig(bytes.NewBuffer(output))
+	log.Printf("DecodeJSONConfig: %s\n", time.Since(start))
 
 	if err != nil {
 		results = append(results, fmt.Sprintf("не удалось декодировать json %s: %s", output, err))
@@ -214,6 +220,10 @@ func (c *GRpcClient) AddDomainsRules(Env conf.Env, FileTmpRoutingBalancers strin
 			Config:       tmsg,
 			ShouldAppend: false,
 		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+
 		resp, err := client.AddRule(ctx, ra)
 		if err != nil {
 			results = append(results, fmt.Sprintf("failed to perform AddRule: %s", err))
