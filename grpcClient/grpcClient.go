@@ -207,11 +207,15 @@ func (c *GRpcClient) AddDomainsRules(Env conf.Env, FileTmpRoutingBalancers strin
 	}
 	for _, in := range rcs {
 
+		start = time.Now()
 		config, err := in.Build()
+		log.Printf("in.Build(): %s\n", time.Since(start))
 		if err != nil {
 			results = append(results, fmt.Sprintf("failed to build conf: %s", err))
 		}
+		start = time.Now()
 		tmsg := cserial.ToTypedMessage(config)
+		log.Printf("cserial.ToTypedMessage: %s\n", time.Since(start))
 		if tmsg == nil {
 			results = append(results, fmt.Sprintf("failed to format config to TypedMessage."))
 		}
@@ -224,7 +228,9 @@ func (c *GRpcClient) AddDomainsRules(Env conf.Env, FileTmpRoutingBalancers strin
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
+		start = time.Now()
 		resp, err := client.AddRule(ctx, ra)
+		log.Printf("AddRule: %s\n", time.Since(start))
 		if err != nil {
 			results = append(results, fmt.Sprintf("failed to perform AddRule: %s", err))
 			results = append(results, fmt.Sprintf("🔄 Xray нужен рестарт | 👻 API призрачно испустил дух"))
