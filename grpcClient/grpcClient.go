@@ -179,66 +179,51 @@ func (c *GRpcClient) AddDomainsRules(Env conf.Env, FileTmpRoutingBalancers strin
 
 	fullpath := filepath.Join(Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
 
-	start := time.Now()
 	ensureXrayAssetLocation(Env)
-	log.Printf("ensureXrayAssetLocation: %s\n", time.Since(start))
 
-	start = time.Now()
 	client := routerService.NewRoutingServiceClient(c.conn)
-	log.Printf("NewRoutingServiceClient: %s\n", time.Since(start))
 
-	start = time.Now()
 	output := benchmarkMode.ModifyDomainsJson(fullpath, domainlist)
-	log.Printf("ModifyDomainsJson: %s\n", time.Since(start))
 
-	start = time.Now()
 	conf, err := serial.DecodeJSONConfig(bytes.NewBuffer(output))
-	log.Printf("DecodeJSONConfig: %s\n", time.Since(start))
 
 	if err != nil {
 		results = append(results, fmt.Sprintf("не удалось декодировать json %s: %s", output, err))
 	}
 
-	rcs := make([]pbcf.RouterConfig, 0)
-	rcs = append(rcs, *conf.RouterConfig)
+	var rcs *pbcf.RouterConfig
+	rcs = conf.RouterConfig
 
-	if len(rcs) == 0 {
-		results = append(results, fmt.Sprintf("no valid rule found in config"))
+	start := time.Now()
+	config, err := rcs.Build()
+	log.Printf("in.Build(): %s\n", time.Since(start))
+	if err != nil {
+		results = append(results, fmt.Sprintf("failed to build conf: %s", err))
 	}
-	for _, in := range rcs {
-
-		start = time.Now()
-		config, err := in.Build()
-		log.Printf("in.Build(): %s\n", time.Since(start))
-		if err != nil {
-			results = append(results, fmt.Sprintf("failed to build conf: %s", err))
-		}
-		start = time.Now()
-		tmsg := cserial.ToTypedMessage(config)
-		log.Printf("cserial.ToTypedMessage: %s\n", time.Since(start))
-		if tmsg == nil {
-			results = append(results, fmt.Sprintf("failed to format config to TypedMessage."))
-		}
-
-		ra := &routerService.AddRuleRequest{
-			Config:       tmsg,
-			ShouldAppend: false,
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
-
-		start = time.Now()
-		resp, err := client.AddRule(ctx, ra)
-		log.Printf("AddRule: %s\n", time.Since(start))
-		if err != nil {
-			results = append(results, fmt.Sprintf("failed to perform AddRule: %s", err))
-			results = append(results, fmt.Sprintf("🔄 Xray нужен рестарт | 👻 API призрачно испустил дух"))
-		}
-
-		results = append(results, showJSONResponse(resp))
-
+	start = time.Now()
+	tmsg := cserial.ToTypedMessage(config)
+	log.Printf("cserial.ToTypedMessage: %s\n", time.Since(start))
+	if tmsg == nil {
+		results = append(results, fmt.Sprintf("failed to format config to TypedMessage."))
 	}
+
+	ra := &routerService.AddRuleRequest{
+		Config:       tmsg,
+		ShouldAppend: false,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	start = time.Now()
+	resp, err := client.AddRule(ctx, ra)
+	log.Printf("AddRule: %s\n", time.Since(start))
+	if err != nil {
+		results = append(results, fmt.Sprintf("failed to perform AddRule: %s", err))
+		results = append(results, fmt.Sprintf("🔄 Xray нужен рестарт | 👻 API призрачно испустил дух"))
+	}
+
+	results = append(results, showJSONResponse(resp))
 
 	return results
 }
