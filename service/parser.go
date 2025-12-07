@@ -5,11 +5,13 @@ import (
 	"SurfBoard/conf"
 	"SurfBoard/grpcClient"
 	"SurfBoard/locale"
+	"context"
 	"fmt"
 	"log"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
@@ -286,7 +288,15 @@ func handleDomainState(
 	// Добавляем сообщения
 	results = append(results, msgs...)
 
+	msgAnimation, _ := bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), "⏳ Обрабатываю..."))
+
+	stop := make(chan struct{})
+	go animateLoading(bot, message.Chat.ChatID(), msgAnimation.MessageID, stop)
+
 	prcf, msgs := client.AddDomainsRulesBuild(pbcf)
+
+	stop <- struct{}{}
+	bot.EditMessageText(ctx, tu.EditMessageText(message.Chat.ChatID(), msgAnimation.MessageID, "✔ Готово!"))
 	// Добавляем сообщения
 	results = append(results, msgs...)
 
@@ -330,4 +340,24 @@ func handleDomainState(
 
 	user.LastBotMsgID = sent.GetMessageID()
 
+}
+
+func animateLoading(bot *telego.Bot, chatID telego.ChatID, msgID int, stop <-chan struct{}) {
+	//frames := []string{"⏳ Обрабатываю.", "⏳ Обрабатываю..", "⏳ Обрабатываю...", "⏳ Обрабатываю...."}
+	frames := []string{
+		"🔄", "🔁", "🔃", "⏳",
+	}
+	i := 0
+	for {
+		select {
+		case <-stop:
+			return
+		default:
+			_, _ = bot.EditMessageText(context.Background(),
+				tu.EditMessageText(chatID, msgID, frames[i%len(frames)]),
+			)
+			i++
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
 }
