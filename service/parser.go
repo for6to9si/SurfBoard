@@ -57,32 +57,25 @@ func registerParserkHandler(
 		switch user.State {
 		case StateDefault:
 			text = "не выбрано"
+			_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), text))
 		case StateBenchmark:
-			text = "Thanks for your data!"
 			handleVPNState(ctx, message, bot, benchmarkclient, config.BenchmarkSettings.Env)
-
 		case StateXray:
-			text = "StateXray!"
 			handleVPNState(ctx, message, bot, xraygRpcclient, config.XwayConf.Env)
-
 		case StateXrayAddDomainToFile:
-			text = "StateXrayAddDomainToFile!"
 			handleDomainState(ctx, message, bot, xraygRpcclient, config.XwayConf.Env)
-
 		case StateBenchmarkAddDomainToFile:
-			text = "StateBenchmarkAddDomainToFile!"
 			handleDomainState(ctx, message, bot, benchmarkclient, config.BenchmarkSettings.Env)
 		case StateSingBox:
 			text = "StateSingBox!"
-
 		case StateSetupApps:
 			text = "StateSetupApps!"
-
 		default:
+			text = "unknown state"
+			_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), text))
 			panic("unknown state")
 		}
 
-		_, _ = bot.SendMessage(ctx, tu.Message(message.Chat.ChatID(), text))
 		upd := telego.Update{Message: &message}
 		return ctx.Next(upd)
 	})
@@ -344,9 +337,8 @@ func handleDomainState(
 
 func animateLoading(bot *telego.Bot, chatID telego.ChatID, msgID int, stop <-chan struct{}) {
 	//frames := []string{"⏳ Обрабатываю.", "⏳ Обрабатываю..", "⏳ Обрабатываю...", "⏳ Обрабатываю...."}
-	frames := []string{
-		"🔄", "🔁", "🔃", "⏳",
-	}
+	//frames := []string{"🔄", "🔁", "🔃", "⏳",}
+	frames := []string{"🔄 Обрабатываю.", "🔁 Обрабатываю..", "🔃 Обрабатываю...", "⏳ Обрабатываю...."}
 	i := 0
 	for {
 		select {

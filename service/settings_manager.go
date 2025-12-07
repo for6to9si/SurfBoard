@@ -3,6 +3,7 @@ package service
 import (
 	"SurfBoard/conf"
 	"SurfBoard/grpcClient"
+	"SurfBoard/locale"
 	"context"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 // --- Callback кнопки ---
@@ -26,6 +28,19 @@ func registerFilesHandler(
 ) {
 	// --- Callback "deploy_<имя>" ---
 	bh.Handle(func(ctx *th.Context, update telego.Update) error {
+
+		loc := locale.Getlocalizer(update.Message.From.LanguageCode)
+
+		if !isUserAuthorized(update.Message.From.ID) {
+			msg, _ := loc.Localize(&i18n.LocalizeConfig{
+				MessageID: "access_denied",
+				TemplateData: map[string]interface{}{
+					"UserID": update.Message.From.ID,
+				},
+			})
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(update.Message.GetChat().ID), msg))
+			return nil
+		}
 
 		// === Callback от кнопок ===
 		if cq := update.CallbackQuery; cq != nil {
