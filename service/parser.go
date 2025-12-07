@@ -282,7 +282,15 @@ func handleDomainState(
 	results = append(results, "Полный список доменов:")
 	results = append(results, user.Domainlist...) // распаковка слайса
 
-	results = append(results, client.AddDomainsRules(Env, FileTmpRoutingBalancers, user.Domainlist)...)
+	pbcf, msgs := client.AddDomainsConf(Env, FileTmpRoutingBalancers, user.Domainlist)
+	// Добавляем сообщения
+	results = append(results, msgs...)
+
+	prcf, msgs := client.AddDomainsRulesBuild(pbcf)
+	// Добавляем сообщения
+	results = append(results, msgs...)
+
+	results = append(results, client.AddDomainsAddRule(prcf)...)
 
 	// Создаем массив рядов клавиатуры
 	rows := [][]telego.InlineKeyboardButton{

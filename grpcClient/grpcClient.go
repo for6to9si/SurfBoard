@@ -15,6 +15,7 @@ import (
 
 	"SurfBoard/conf"
 
+	"github.com/xtls/xray-core/app/router"
 	routerService "github.com/xtls/xray-core/app/router/command"
 	creflect "github.com/xtls/xray-core/common/reflect"
 	cserial "github.com/xtls/xray-core/common/serial"
@@ -173,15 +174,13 @@ func OverrideBalancerTarget(c *GRpcClient, balancerTag, target string) string {
 }
 
 // ListVPNStatuses возвращает статус всех Outbound-соединений
-func (c *GRpcClient) AddDomainsRules(Env conf.Env, FileTmpRoutingBalancers string, domainlist []string) []string {
+func (c *GRpcClient) AddDomainsConf(Env conf.Env, FileTmpRoutingBalancers string, domainlist []string) (*pbcf.Config, []string) {
 
 	var results []string
 
 	fullpath := filepath.Join(Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
 
 	ensureXrayAssetLocation(Env)
-
-	client := routerService.NewRoutingServiceClient(c.conn)
 
 	output := benchmarkMode.ModifyDomainsJson(fullpath, domainlist)
 
@@ -190,6 +189,11 @@ func (c *GRpcClient) AddDomainsRules(Env conf.Env, FileTmpRoutingBalancers strin
 	if err != nil {
 		results = append(results, fmt.Sprintf("не удалось декодировать json %s: %s", output, err))
 	}
+
+	return conf, results
+}
+
+func (c *GRpcClient) AddDomainsRulesBuild(conf *pbcf.Config) (config *router.Config, results []string) {
 
 	var rcs *pbcf.RouterConfig
 	rcs = conf.RouterConfig
@@ -200,7 +204,12 @@ func (c *GRpcClient) AddDomainsRules(Env conf.Env, FileTmpRoutingBalancers strin
 	if err != nil {
 		results = append(results, fmt.Sprintf("failed to build conf: %s", err))
 	}
-	start = time.Now()
+	return
+}
+
+func (c *GRpcClient) AddDomainsAddRule(config *router.Config) (results []string) {
+
+	start := time.Now()
 	tmsg := cserial.ToTypedMessage(config)
 	log.Printf("cserial.ToTypedMessage: %s\n", time.Since(start))
 	if tmsg == nil {
@@ -212,6 +221,7 @@ func (c *GRpcClient) AddDomainsRules(Env conf.Env, FileTmpRoutingBalancers strin
 		ShouldAppend: false,
 	}
 
+	client := routerService.NewRoutingServiceClient(c.conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
