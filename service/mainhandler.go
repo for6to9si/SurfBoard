@@ -600,3 +600,17 @@ func handleFastVPNTest(ctx *th.Context, query telego.CallbackQuery, bot *telego.
 	).WithReplyMarkup(&telego.InlineKeyboardMarkup{InlineKeyboard: inlineKeyboard}))
 	return err
 }
+
+func getUserFromUpdate(update telego.Update) *telego.User {
+	if update.Message != nil && update.Message.From.ID != 0 {
+		return update.Message.From
+	}
+	if update.CallbackQuery != nil && update.CallbackQuery.From.ID != 0 {
+		return &update.CallbackQuery.From
+	}
+	if update.InlineQuery != nil && update.InlineQuery.From.ID != 0 {
+		return &update.InlineQuery.From
+	}
+
+	return nil
+}

@@ -29,13 +29,18 @@ func registerHandlers(
 	// --- Callback "program_<имя>" ---
 	bh.Handle(func(ctx *th.Context, update telego.Update) error {
 
-		loc := locale.Getlocalizer(update.Message.From.LanguageCode)
+		user := getUserFromUpdate(update)
+		if user == nil {
+			return nil // нет юзера → ничего не делаем
+		}
 
-		if !isUserAuthorized(update.Message.From.ID) {
+		loc := locale.Getlocalizer(user.LanguageCode)
+
+		if !isUserAuthorized(user.ID) {
 			msg, _ := loc.Localize(&i18n.LocalizeConfig{
 				MessageID: "access_denied",
 				TemplateData: map[string]interface{}{
-					"UserID": update.Message.From.ID,
+					"UserID": user.ID,
 				},
 			})
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(update.Message.GetChat().ID), msg))
