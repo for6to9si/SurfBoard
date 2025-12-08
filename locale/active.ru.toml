@@ -2,13 +2,16 @@
 other = "Привет, {{.Name}}!"
 
 [current_vpn]
-other = "Посмотреть текущий VPN"
+other = "🛰 Текущий VPN"
 
 [all_vpns]
-other = "Посмотреть все VPN"
+other = "🗃 Список VPN"
 
 [add_vpn]
-other = "Добавить новый VPN"
+other = "🆕 Добавить VPN"
+
+[add_domain]
+other = "➕ Добавить web-сайт"
 
 [done]
 other = "Готово"
@@ -47,7 +50,7 @@ other = "Доступ запрещён: вы не авторизованы дл�
 other = "Cервис находится в разработке. Доступ закрыт"
 
 [change_files_vpn]
-other = "Конфиг"
+other = "📁 Конфиги"
 
 [version_flag_description]
 other = "Вывести версию приложения и выйти"

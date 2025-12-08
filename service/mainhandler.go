@@ -81,6 +81,7 @@ func registerCallbackHandler(
 		allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
 		filesVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "change_files_vpn"})
 		addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
+		addDomain, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_domain"})
 		//		done, _ := loc.LocalizeMessage(&i18n.Message{ID: "done"})
 		underDevelopment, _ := loc.LocalizeMessage(&i18n.Message{ID: "under_development"})
 
@@ -150,10 +151,10 @@ func registerCallbackHandler(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(currentVPN).WithCallbackData("xray_current_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("xray_all_vpns")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(filesVPN).WithCallbackData("xray_getfile")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Быстрый перезапуск XRAY").WithCallbackData("xray_fast_restart")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Сгенерировать routing-settings.json").WithCallbackData("xray_build_routing")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Добавить домен").WithCallbackData("xray_add_domains")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton("Выполнить S98xray backup").WithCallbackData("xray_run_x98xray_backup")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("🔁 Перезапуск XRAY").WithCallbackData("xray_fast_restart")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("🛠 Генерация routing-settings.json").WithCallbackData("xray_build_routing")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addDomain).WithCallbackData("xray_add_domains")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("💾 S98xray Backup").WithCallbackData("xray_run_x98xray_backup")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("xray_add_vpn")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")),
 			)))
@@ -555,6 +556,7 @@ func createBenchmarkKeyboard(loc *i18n.Localizer, isXrayRunning bool) [][]telego
 	allVPNs, _ := loc.LocalizeMessage(&i18n.Message{ID: "all_vpns"})
 	addVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_vpn"})
 	currentVPN, _ := loc.LocalizeMessage(&i18n.Message{ID: "current_vpn"})
+	addDomain, _ := loc.LocalizeMessage(&i18n.Message{ID: "add_domain"})
 
 	buttonText := "⏹️ Стоп"
 	buttonData := "benchmark_vpn_off"
@@ -567,7 +569,7 @@ func createBenchmarkKeyboard(loc *i18n.Localizer, isXrayRunning bool) [][]telego
 		{tu.InlineKeyboardButton(buttonText).WithCallbackData(buttonData)},
 		{tu.InlineKeyboardButton(allVPNs).WithCallbackData("benchmark_all_vpns")},
 		{tu.InlineKeyboardButton(currentVPN).WithCallbackData("benchmark_current_vpn")},
-		{tu.InlineKeyboardButton("Добавить домен").WithCallbackData("benchmark_add_domains")},
+		{tu.InlineKeyboardButton(addDomain).WithCallbackData("benchmark_add_domains")},
 		{tu.InlineKeyboardButton(addVPN).WithCallbackData("benchmark_add_vpn")},
 		{tu.InlineKeyboardButton("fastVpnTest").WithCallbackData("fast_vpn_test")},
 		{tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main")},

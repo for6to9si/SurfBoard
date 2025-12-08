@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -233,7 +234,7 @@ func GetLocalVersion(commands map[string]conf.Programm) []VersionInfo {
 
 	// 1️⃣ Проверяем кэш
 	if cached, ok := loadCache(); ok {
-		fmt.Println("📦 Используется кэш версий (моложе 15 минут)")
+		log.Println("📦 Используется кэш версий (моложе 15 минут)")
 		return cached
 	}
 

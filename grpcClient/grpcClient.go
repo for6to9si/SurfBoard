@@ -193,14 +193,15 @@ func (c *GRpcClient) AddDomainsConf(Env conf.Env, FileTmpRoutingBalancers string
 	return conf, results
 }
 
-func (c *GRpcClient) AddDomainsRulesBuild(conf *pbcf.Config) (config *router.Config, results []string) {
+func (c *GRpcClient) AddDomainsRulesBuild(conf *pbcf.Config) (config *router.Config, results []string, benchmarkTime time.Duration) {
 
 	var rcs *pbcf.RouterConfig
 	rcs = conf.RouterConfig
 
 	start := time.Now()
 	config, err := rcs.Build()
-	log.Printf("in.Build(): %s\n", time.Since(start))
+	benchmarkTime = time.Since(start)
+	log.Printf("benchmarkTime route Build(): %s\n", benchmarkTime)
 	if err != nil {
 		results = append(results, fmt.Sprintf("failed to build conf: %s", err))
 	}

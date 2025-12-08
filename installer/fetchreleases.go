@@ -161,8 +161,7 @@ func fetchLatestForRepo(cfg RepoConfig, maxPerArch int) []AppLinkButton {
 	fmt.Println("Operating System:", runtime.GOOS)
 	getArch() // удалить после проверки на роутере с архитектурой ARM
 
-	//arch := runtime.GOARCH
-	arch := "mipsle"
+	arch := runtime.GOARCH
 	re, ok := cfg.ArchPatterns[arch]
 	if !ok {
 		fmt.Printf("⚠️ Архитектура %q не поддерживается (в cfg.ArchPatterns отсутствует)\n", arch)

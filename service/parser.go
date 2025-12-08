@@ -286,10 +286,13 @@ func handleDomainState(
 	stop := make(chan struct{})
 	go animateLoading(bot, message.Chat.ChatID(), msgAnimation.MessageID, stop)
 
-	prcf, msgs := client.AddDomainsRulesBuild(pbcf)
+	prcf, msgs, benchmarkTime := client.AddDomainsRulesBuild(pbcf)
 
 	stop <- struct{}{}
-	bot.EditMessageText(ctx, tu.EditMessageText(message.Chat.ChatID(), msgAnimation.MessageID, "✔ Готово!"))
+	bot.EditMessageText(ctx, tu.EditMessageText(message.Chat.ChatID(), msgAnimation.MessageID, fmt.Sprintf("✔ Готово! Время сборки: %s", benchmarkTime)))
+	bot.SendMessage(ctx,
+		tu.Message(message.Chat.ChatID(),
+			"**ВАЖНО!** Используйте компактный файл `.dat` или соберите свой, чтобы уменьшить время сборки."))
 	// Добавляем сообщения
 	results = append(results, msgs...)
 
@@ -336,8 +339,6 @@ func handleDomainState(
 }
 
 func animateLoading(bot *telego.Bot, chatID telego.ChatID, msgID int, stop <-chan struct{}) {
-	//frames := []string{"⏳ Обрабатываю.", "⏳ Обрабатываю..", "⏳ Обрабатываю...", "⏳ Обрабатываю...."}
-	//frames := []string{"🔄", "🔁", "🔃", "⏳",}
 	frames := []string{"🔄 Обрабатываю.", "🔁 Обрабатываю..", "🔃 Обрабатываю...", "⏳ Обрабатываю...."}
 	i := 0
 	for {
