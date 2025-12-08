@@ -290,9 +290,13 @@ func handleDomainState(
 
 	stop <- struct{}{}
 	bot.EditMessageText(ctx, tu.EditMessageText(message.Chat.ChatID(), msgAnimation.MessageID, fmt.Sprintf("✔ Готово! Время сборки: %s", benchmarkTime)))
-	bot.SendMessage(ctx,
-		tu.Message(message.Chat.ChatID(),
-			"**ВАЖНО!** Используйте компактный файл `.dat` или соберите свой, чтобы уменьшить время сборки."))
+
+	bot.SendMessage(ctx, &telego.SendMessageParams{
+		ChatID:    tu.ID(message.Chat.ID),
+		Text:      "*ВАЖНО!* Используйте компактный файл `.dat` или соберите свой, чтобы уменьшить время сборки.",
+		ParseMode: telego.ModeMarkdown,
+	})
+
 	// Добавляем сообщения
 	results = append(results, msgs...)
 
