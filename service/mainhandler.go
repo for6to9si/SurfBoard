@@ -273,12 +273,11 @@ func registerCallbackHandler(
 		case "xray_getfile":
 			var text string
 			switch user.State {
-			case StateBenchmark:
+			case StateDefault, StateBenchmark, StateBenchmarkAddDomainToFile:
 				text = ""
-
-			case StateXray:
-				text = "🧩 " + FileXwaveConf
-			case StateSingBox:
+			case StateXray, StateXrayAddDomainToFile:
+				text = "🌊 " + FileXwaveConf
+			case StateSingBox, StateSetupApps:
 				text = "🧩 swave-conf.json"
 
 			default:
@@ -288,7 +287,10 @@ func registerCallbackHandler(
 			// Создаем массив рядов клавиатуры
 			rows := [][]telego.InlineKeyboardButton{
 				tu.InlineKeyboardRow(
-					tu.InlineKeyboardButton("⚙️ " + FileSystemDefault).WithCallbackData(FileSystemDefault),
+					tu.InlineKeyboardButton("🛠️ " + FileSystemDefault).WithCallbackData(FileSystemDefault),
+				),
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("⚙️ " + FileGeneratedRouting).WithCallbackData(FileGeneratedRouting),
 				),
 				tu.InlineKeyboardRow(
 					tu.InlineKeyboardButton("📄 " + FileTmpRoutingBalancers).WithCallbackData(FileTmpRoutingBalancers),

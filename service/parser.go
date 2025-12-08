@@ -308,9 +308,6 @@ func handleDomainState(
 			tu.InlineKeyboardButton("📄 Сохранить в файле:" + FileTmpRoutingBalancers).WithCallbackData("save_routing_file"),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("⚙️ " + FileSystemDefault).WithCallbackData(FileSystemDefault),
-		),
-		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("back_to_main"), //benchmark_vpn or xray_vpn
 		),
 	}

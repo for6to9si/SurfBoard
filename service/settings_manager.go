@@ -104,6 +104,7 @@ func handleFileUpload(ctx context.Context, bot *telego.Bot, chatID telego.ChatID
 			"⚠️ Неизвестный файл. Можно заменять только:\n"+
 				"- "+FileTmpRoutingBalancers+"\n"+
 				"- "+FileSystemDefault+"\n"+
+				"- "+FileGeneratedRouting+"\n"+
 				"- "+FileXwaveConf))
 		return
 	}
@@ -146,13 +147,16 @@ func handleFileUpload(ctx context.Context, bot *telego.Bot, chatID telego.ChatID
 	// И отправляем те же кнопки, чтобы можно было сразу скачать файл
 	keyboard := tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("🛠️ "+FileSystemDefault).WithCallbackData(FileSystemDefault),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("⚙️ "+FileGeneratedRouting).WithCallbackData(FileGeneratedRouting),
+		),
+		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("📄 "+FileTmpRoutingBalancers).WithCallbackData(FileTmpRoutingBalancers),
 		),
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("⚙️ "+FileSystemDefault).WithCallbackData(FileSystemDefault),
-		),
-		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("🧩 "+FileXwaveConf).WithCallbackData(FileXwaveConf),
+			tu.InlineKeyboardButton("🌊 "+FileXwaveConf).WithCallbackData(FileXwaveConf),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("⬅️ Назад").WithCallbackData("xray_vpn")),
@@ -168,6 +172,8 @@ func getTargetPath(fileName string, config *conf.Config) string {
 		return path.Join(config.XwayConf.Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
 	case FileSystemDefault:
 		return path.Join(config.XwayConf.Env.XrayLocationConfdir, FileSystemDefault)
+	case FileGeneratedRouting:
+		return path.Join(config.XwayConf.Env.XrayLocationConfdir, FileGeneratedRouting)
 	case FileXwaveConf:
 		return "/opt/etc/xwave/xwave-conf.json"
 	default:
