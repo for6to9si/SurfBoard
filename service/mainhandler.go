@@ -232,7 +232,7 @@ func registerCallbackHandler(
 				_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), strTmp))
 				break
 			}
-			fullpath := filepath.Join(config.XwayConf.Env.XrayLocationConfdir, "routing-settings.generated.json")
+			fullpath := filepath.Join(config.XwayConf.Env.XrayLocationConfdir, FileGeneratedRouting)
 
 			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, tags)
 
@@ -371,7 +371,7 @@ func registerCallbackHandler(
 
 			// Формируем полный путь к файлу
 			fulltempdir := filepath.Join(config.BenchmarkSettings.Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
-			fullpath := filepath.Join(config.BenchmarkSettings.Env.XrayLocationConfdir, "routing-settings.generated.json")
+			fullpath := filepath.Join(config.BenchmarkSettings.Env.XrayLocationConfdir, FileGeneratedRouting)
 
 			results := benchmarkMode.ModifyBalancerJson(fulltempdir, fullpath, vpns)
 

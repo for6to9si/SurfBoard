@@ -166,7 +166,7 @@ func ModifyBalancerJson(template string, filename string, vpns []string) []strin
 		results = append(results, fmt.Sprintf("ошибка сериализации JSON: %s", err))
 	}
 
-	// Сохраняем результат в routing-settings.generated.json
+	// Сохраняем результат в FileGeneratedRouting
 	if err := os.WriteFile(filename, output, 0644); err != nil {
 		results = append(results, fmt.Sprintf("не удалось записать %s", filename))
 	}
