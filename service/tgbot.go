@@ -75,9 +75,13 @@ func setupBotMetadata(ctx context.Context, bot *telego.Bot) {
 	_ = bot.SetMyDescription(ctx, &telego.SetMyDescriptionParams{
 		Description: "Приветствую! Это бот для управления VPN.\n\n" +
 			"📌 Основные функции:\n" +
-			"- Настройка VPN подключений\n" +
-			"- Тестирование скорости\n" +
-			"- Управление серверами\n\n" +
+			"- Импорт vless:// trojan:// ss:// и добавление их в балансер X-wave\n" +
+			"- Проверка VPN метод leastLoad X-wave\n" +
+			"- Выбор VPN из балансера, Override balancer X-wave\n" +
+			"- Инсталляция с выбором версии /обновление/удаление X-wave, S-wave, Surfboard, и других программ с github" +
+			"- Скачивание/Замена файлов настроек: system-default.json, routing-balancers.json, {x-wave}config/config.json" +
+			"- Быстрое добавление сайта в rules, для тестирования без сохранения в конфиге, Add routing rules" +
+			"- Управлением Xwave\n" +
 			"Нажмите /start для начала работы",
 	})
 	_ = bot.SetMyCommands(ctx, &telego.SetMyCommandsParams{

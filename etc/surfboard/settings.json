@@ -16,7 +16,7 @@
         {
             "XRAY_LOCATION_ASSET": "/opt/etc/xray/dat",
             "XRAY_LOCATION_CONFDIR": "/opt/etc/xray/configs",
-            "XRAY_LOCATION_TEMPLATEDIR": "/opt/etc/xray/template",
+            "XRAY_LOCATION_TEMPLATEDIR": "/opt/etc/xray/templates",
             "XRAY_RAY_BUFFER_SIZE": 4
         },
         "grpc":
