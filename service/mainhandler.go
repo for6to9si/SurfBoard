@@ -548,8 +548,7 @@ func listAllVPNs(client *grpcClient.GRpcClient) string {
 }
 
 func addNewVPN(client *grpcClient.GRpcClient) string {
-	str, _ := client.ListVPNStatuses()
-	return str
+	return "Вставьте или введите ключ в формате:\nvless://... vmess://... trojan://... ss://... socks://..."
 }
 
 // Определяем функцию для создания клавиатуры для benchmark-режима
