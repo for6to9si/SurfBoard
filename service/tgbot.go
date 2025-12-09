@@ -100,6 +100,6 @@ func RegisterHandlers(
 	registerHandlers(bh, bot, config, isUserAuthorized)
 	registerDeploy(bh, bot, config, isUserAuthorized)
 	registerParserkHandler(bh, bot, config, xrayClient, benchmarkClient, isUserAuthorized)
-	registerFilesHandler(bh, bot, config, xrayClient, benchmarkClient, isUserAuthorized)
+	registerFilesHandler(bh, bot, config, isUserAuthorized)
 	registerCallbackHandler(bh, bot, config, xrayClient, benchmarkClient, isUserAuthorized)
 }

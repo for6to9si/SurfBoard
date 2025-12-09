@@ -2,7 +2,6 @@ package service
 
 import (
 	"SurfBoard/conf"
-	"SurfBoard/grpcClient"
 	"SurfBoard/locale"
 	"context"
 	"fmt"
@@ -23,7 +22,6 @@ func registerFilesHandler(
 	bh *th.BotHandler,
 	bot *telego.Bot,
 	config *conf.Config,
-	xraygRpcclient, benchmarkclient *grpcClient.GRpcClient,
 	isUserAuthorized func(int64) bool,
 ) {
 	// --- Callback "deploy_<имя>" ---
@@ -73,9 +71,9 @@ func registerFilesHandler(
 func handleCallback(ctx context.Context, bot *telego.Bot, cq *telego.CallbackQuery, config *conf.Config) {
 	chatID := cq.Message.GetChat().ChatID()
 	fileName := cq.Data
-	path := getTargetPath(fileName, config)
+	tgpath := getTargetPath(fileName, config)
 
-	if path == "" {
+	if tgpath == "" {
 		return
 	}
 
@@ -85,12 +83,12 @@ func handleCallback(ctx context.Context, bot *telego.Bot, cq *telego.CallbackQue
 		ShowAlert:       false,
 	})
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	if _, err := os.Stat(tgpath); os.IsNotExist(err) {
 		bot.SendMessage(ctx, tu.Message(chatID, "Файл ещё не существует на сервере."))
 		return
 	}
 
-	_, _ = bot.SendDocument(ctx, tu.Document(chatID, tu.File(mustOpen(path))))
+	_, _ = bot.SendDocument(ctx, tu.Document(chatID, tu.File(mustOpen(tgpath))))
 }
 
 // === Обработка загрузки нового файла ===
