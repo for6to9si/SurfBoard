@@ -152,7 +152,7 @@ func registerCallbackHandler(
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(allVPNs).WithCallbackData("xray_all_vpns")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(filesVPN).WithCallbackData("xray_getfile")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("🔁 Перезапуск XRAY").WithCallbackData("xray_fast_restart")),
-				tu.InlineKeyboardRow(tu.InlineKeyboardButton("🛠 Генерация routing-settings.json").WithCallbackData("xray_build_routing")),
+				tu.InlineKeyboardRow(tu.InlineKeyboardButton("🛠 Создание: "+FileGeneratedRouting).WithCallbackData("xray_build_routing")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addDomain).WithCallbackData("xray_add_domains")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton("💾 S98xray Backup").WithCallbackData("xray_run_x98xray_backup")),
 				tu.InlineKeyboardRow(tu.InlineKeyboardButton(addVPN).WithCallbackData("xray_add_vpn")),

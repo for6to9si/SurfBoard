@@ -30,7 +30,7 @@
     },
     "swayConf":
     {
-        "isEnabled": true,
+        "isEnabled": false,
         "paths":
         {
             "singboxExecutable": "/opt/sbin/sing-box",
@@ -49,8 +49,8 @@
     },
     "benchmarkSettings":
     {
-        "isEnabled": true,
-        "autostart": true,
+        "isEnabled": false,
+        "autostart": false,
         "paths":
         {
             "xrayExecutable": "/opt/sbin/xray",
