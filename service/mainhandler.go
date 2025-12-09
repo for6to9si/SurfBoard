@@ -91,7 +91,6 @@ func registerCallbackHandler(
 			// Отображаем скрытые кнопки
 
 			user.State = StateSetupApps
-			user.Domainlist = nil
 
 			programs := installer.GetLocalVersion(config.Installer.Programs)
 
@@ -182,6 +181,23 @@ func registerCallbackHandler(
 			msg.LinkPreviewOptions = &telego.LinkPreviewOptions{IsDisabled: true}
 			bot.SendMessage(ctx, msg)
 
+		case "xray_clean_list_domains":
+			user.State = StateXrayAddDomainToFile
+			user.Domainlist = nil
+			msg := tu.Message(
+				tu.ID(query.Message.GetChat().ID),
+				"Список доменов успешно очищен\n\n"+
+					"Введите домены в одном из форматов:\n\n"+
+					"Через запятую:\n"+
+					"ti.com, analog.com, qualcomm.com\n\n"+
+					"Или столбиком:\n"+
+					"altera.com\n"+
+					"intel.com\n"+
+					"nvidia.com\n\n"+
+					"Также можно использовать готовые доменные группы (geosite) из проекта v2fly.\n")
+			msg.LinkPreviewOptions = &telego.LinkPreviewOptions{IsDisabled: true}
+			bot.SendMessage(ctx, msg)
+
 		case "xray_run_x98xray_backup":
 
 			// Сразу убираем часики
@@ -269,7 +285,7 @@ func registerCallbackHandler(
 		case "xray_all_vpns":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(xraygRpcclient)))
 		case "xray_add_vpn":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(xraygRpcclient)))
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN()))
 		case "xray_getfile":
 			var text string
 			switch user.State {
@@ -434,7 +450,7 @@ func registerCallbackHandler(
 		case "benchmark_all_vpns":
 			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), listAllVPNs(benchmarkclient)))
 		case "benchmark_add_vpn":
-			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN(benchmarkclient)))
+			_, _ = bot.SendMessage(ctx, tu.Message(tu.ID(query.Message.GetChat().ID), addNewVPN()))
 
 		case "save_routing_file":
 
@@ -474,7 +490,6 @@ func registerCallbackHandler(
 		case "back_to_main":
 			// Возвращаемся к начальному меню
 			user.State = StateDefault
-			user.Domainlist = nil
 
 			inlineKeyboard := mainMenu(config)
 			_, _ = bot.SendMessage(ctx, tu.Message(
@@ -547,7 +562,7 @@ func listAllVPNs(client *grpcClient.GRpcClient) string {
 	return str
 }
 
-func addNewVPN(client *grpcClient.GRpcClient) string {
+func addNewVPN() string {
 	return "Вставьте или введите ключ в формате:\nvless://... vmess://... trojan://... ss://... socks://..."
 }
 
