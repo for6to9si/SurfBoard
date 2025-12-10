@@ -240,13 +240,21 @@ func (c *GRpcClient) AddDomainsAddRule(config *router.Config) (results []string)
 }
 
 func ensureXrayAssetLocation(Env conf.Env) {
-	const envName = "XRAY_LOCATION_ASSET"
-	defaultPath := Env.XrayLocationAsset
+	const envASSET = "XRAY_LOCATION_ASSET"
+	const envCONFDIR = "XRAY_LOCATION_CONFDIR"
 
-	if os.Getenv(envName) == "" {
+	if os.Getenv(envASSET) == "" {
 		// Можно убедиться, что путь существует (по желанию)
+		defaultPath := Env.XrayLocationAsset
 		if _, err := os.Stat(defaultPath); err == nil {
-			_ = os.Setenv(envName, defaultPath)
+			_ = os.Setenv(envASSET, defaultPath)
+		}
+	}
+	if os.Getenv(envCONFDIR) == "" {
+		// Можно убедиться, что путь существует (по желанию)
+		defaultPath := Env.XrayLocationConfdir
+		if _, err := os.Stat(defaultPath); err == nil {
+			_ = os.Setenv(envCONFDIR, defaultPath)
 		}
 	}
 }
