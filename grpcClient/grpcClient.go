@@ -176,13 +176,11 @@ func OverrideBalancerTarget(c *GRpcClient, balancerTag, target string) string {
 // ListVPNStatuses возвращает статус всех Outbound-соединений
 func (c *GRpcClient) AddDomainsConf(Env conf.Env, FileTmpRoutingBalancers string, domainlist []string) (*pbcf.Config, []string) {
 
-	var results []string
-
-	fullpath := filepath.Join(Env.XrayLocationTemplatedir, FileTmpRoutingBalancers)
+	fullpath := filepath.Join(Env.XrayLocationConfdir, FileTmpRoutingBalancers)
 
 	ensureXrayAssetLocation(Env)
 
-	output := benchmarkMode.ModifyDomainsJson(fullpath, domainlist)
+	output, results := benchmarkMode.ModifyDomainsJson(fullpath, domainlist)
 
 	conf, err := serial.DecodeJSONConfig(bytes.NewBuffer(output))
 
@@ -196,6 +194,19 @@ func (c *GRpcClient) AddDomainsConf(Env conf.Env, FileTmpRoutingBalancers string
 func (c *GRpcClient) AddDomainsRulesBuild(conf *pbcf.Config) (config *router.Config, results []string, benchmarkTime time.Duration) {
 
 	var rcs *pbcf.RouterConfig
+
+	// Если сама конфигурация == nil
+	if conf == nil {
+		results = append(results, "Ошибка: конфигурация пуста (conf == nil)")
+		return nil, results, 0
+	}
+
+	// Если RouterConfig не задан
+	if conf.RouterConfig == nil {
+		results = append(results, "Ошибка: конфигурация маршрутизатора отсутствует (conf.RouterConfig == nil)")
+		return nil, results, 0
+	}
+
 	rcs = conf.RouterConfig
 
 	start := time.Now()
@@ -241,20 +252,11 @@ func (c *GRpcClient) AddDomainsAddRule(config *router.Config) (results []string)
 
 func ensureXrayAssetLocation(Env conf.Env) {
 	const envASSET = "XRAY_LOCATION_ASSET"
-	const envCONFDIR = "XRAY_LOCATION_CONFDIR"
-
 	if os.Getenv(envASSET) == "" {
 		// Можно убедиться, что путь существует (по желанию)
 		defaultPath := Env.XrayLocationAsset
 		if _, err := os.Stat(defaultPath); err == nil {
 			_ = os.Setenv(envASSET, defaultPath)
-		}
-	}
-	if os.Getenv(envCONFDIR) == "" {
-		// Можно убедиться, что путь существует (по желанию)
-		defaultPath := Env.XrayLocationConfdir
-		if _, err := os.Stat(defaultPath); err == nil {
-			_ = os.Setenv(envCONFDIR, defaultPath)
 		}
 	}
 }

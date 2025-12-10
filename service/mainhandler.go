@@ -182,7 +182,6 @@ func registerCallbackHandler(
 			bot.SendMessage(ctx, msg)
 
 		case "xray_clean_list_domains":
-			user.State = StateXrayAddDomainToFile
 			user.Domainlist = nil
 			msg := tu.Message(
 				tu.ID(query.Message.GetChat().ID),

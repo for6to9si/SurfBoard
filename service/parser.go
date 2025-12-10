@@ -289,6 +289,17 @@ func handleDomainState(
 	prcf, msgs, benchmarkTime := client.AddDomainsRulesBuild(pbcf)
 
 	stop <- struct{}{}
+
+	if benchmarkTime == 0 {
+		sent, _ := bot.SendMessage(ctx, &telego.SendMessageParams{
+			ChatID:    tu.ID(message.Chat.ID),
+			Text:      strings.Join(results, "\n"),
+			ParseMode: telego.ModeHTML,
+		})
+		user.LastBotMsgID = sent.GetMessageID()
+		return
+	}
+
 	bot.EditMessageText(ctx, tu.EditMessageText(message.Chat.ChatID(), msgAnimation.MessageID, fmt.Sprintf("✔ Готово! Время сборки: %s", benchmarkTime)))
 
 	bot.SendMessage(ctx, &telego.SendMessageParams{

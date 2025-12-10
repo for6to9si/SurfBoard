@@ -96,7 +96,6 @@ func addDomainsToRules(cfg *Config, newDomains []string) ([]string, error) {
 			for _, nd := range newDomains {
 				if !existsMap[nd] {
 					domains = append(domains, nd)
-					results = append(results, fmt.Sprintf("Добавлен домен: %s", nd))
 				}
 			}
 
@@ -108,7 +107,6 @@ func addDomainsToRules(cfg *Config, newDomains []string) ([]string, error) {
 			newList := []interface{}{}
 			for _, nd := range newDomains {
 				newList = append(newList, nd)
-				results = append(results, fmt.Sprintf("Добавлен домен: %s", nd))
 			}
 
 			cfg.Routing.Rules[i]["domain"] = newList
@@ -221,7 +219,7 @@ func ModifyDomains(template string, newDomains []string) []string {
 	return results
 }
 
-func ModifyDomainsJson(template string, newDomains []string) []byte {
+func ModifyDomainsJson(template string, newDomains []string) ([]byte, []string) {
 
 	var results []string
 
@@ -229,12 +227,13 @@ func ModifyDomainsJson(template string, newDomains []string) []byte {
 	data, err := os.ReadFile(template)
 	if err != nil {
 		results = append(results, fmt.Sprintf("не удалось открыть %s", template))
-
+		return nil, results
 	}
 
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		results = append(results, fmt.Sprintf("ошибка парсинга JSON: %s", err))
+		return nil, results
 	}
 
 	// Добавляем новые домены
@@ -253,5 +252,5 @@ func ModifyDomainsJson(template string, newDomains []string) []byte {
 		results = append(results, fmt.Sprintf("ошибка сериализации JSON: %s", err))
 	}
 
-	return output
+	return output, results
 }
