@@ -41,7 +41,7 @@ var user User
 
 // --- Запуск Telegram-бота ---
 func RunTgBot(ctx context.Context, config *conf.Config, xrayClient, benchmarkClient *grpcClient.GRpcClient) {
-	bot, err := telego.NewBot(config.TgBot.Token, telego.WithDefaultDebugLogger())
+	bot, err := telego.NewBot(config.TgBot.Token, telego.WithDiscardLogger())
 	if err != nil {
 		log.Fatalf("Ошибка создания бота: %v", err)
 	}

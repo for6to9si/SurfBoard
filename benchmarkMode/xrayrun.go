@@ -25,7 +25,7 @@ func Init(benchmarkSettings conf.BenchmarkSettings) {
 	lockFile = benchmarkSettings.Paths.XraylockFile
 
 	//address = fmt.Sprintf("dns:///% Rathod s:%d", grpc.Target.IP, grpc.Target.Port)
-	fmt.Printf("Используется GRPC IP: %s, Порт: %d\n", settings.Grpc.Target.IP, settings.Grpc.Target.Port)
+	//fmt.Printf("Используется GRPC IP: %s, Порт: %d\n", settings.Grpc.Target.IP, settings.Grpc.Target.Port)
 
 }
 
