@@ -277,7 +277,7 @@ func handleDomainState(
 	results = append(results, "Полный список доменов:")
 	results = append(results, user.Domainlist...) // распаковка слайса
 
-	pbcf, msgs := client.AddDomainsConf(Env, FileTmpRoutingBalancers, user.Domainlist)
+	pbcf, msgs := client.AddDomainsConf(Env, FileGeneratedRouting, user.Domainlist)
 	// Добавляем сообщения
 	results = append(results, msgs...)
 
