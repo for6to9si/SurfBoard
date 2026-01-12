@@ -154,6 +154,29 @@
                 "service_commands": ["/home/andrew/work/for6to9si/telegram/SurfBoard/build/surfboard-amd64 -version"],
                 "only_release": true
             },
+            "hysteria":
+            {
+                "executablePath": "/opt/sbin/hysteria",
+                "args":
+                [
+                    "version"
+                ],
+                "repo": "for6to9si/H-wave",
+                "arch_patterns":
+                {
+                    "amd64": "(?i)(amd64).*?\\.(ipk|tar\\.gz)$",
+                    "i386": "(?i)(i386).*?\\.(ipk|tar\\.gz)$",
+                    "arm64": "(?i)(arm64|aarch64).*?\\.(ipk|tar\\.gz)$",
+                    "mipsle": "(?i)(mipsel|mipsle).*?\\.(ipk|tar\\.gz)$",
+                    "mips": "(?i)mips\\.(?:.*\\.)?(?:ipk|tar\\.gz)$"
+                },
+                "isEnabled": true,
+                "service_commands":
+                [
+                    "/opt/etc/init.d/S96hysteria restart"
+                ],
+                "only_release": false
+            },
             "youtubeUnblock":
             {
                 "executablePath": "/opt/bin/youtubeUnblock",
