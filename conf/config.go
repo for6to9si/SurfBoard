@@ -87,8 +87,9 @@ type BenchmarkSettings struct {
 	OpenAI      OpenAI      `json:"openAI"`
 }
 type TgBot struct {
-	Token    string  `json:"TOKEN"`
-	AdminIds []int64 `json:"adminIds"`
+	Token     string  `json:"TOKEN"`
+	AdminIds  []int64 `json:"adminIds"`
+	Interface string  `json:"interface"`
 }
 
 type Github struct {

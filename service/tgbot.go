@@ -5,6 +5,10 @@ import (
 	"SurfBoard/grpcClient"
 	"context"
 	"log"
+	"net"
+	"net/http"
+	"syscall"
+	"time"
 
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
@@ -39,9 +43,64 @@ type User struct {
 
 var user User
 
+func createBotWithInterface(config *conf.Config, interfaceName string) (*telego.Bot, error) {
+	// 1. Создаём Dialer с привязкой к интерфейсу
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+
+	if interfaceName != "" {
+		// Самый надёжный способ для Linux — SO_BINDTODEVICE
+		dialer.Control = func(network, address string, c syscall.RawConn) error {
+			var opErr error
+			err := c.Control(func(fd uintptr) {
+				// SO_BINDTODEVICE требует имени интерфейса как []byte
+				ifName := []byte(interfaceName)
+				opErr = syscall.SetsockoptString(int(fd), syscall.SOL_SOCKET, syscall.SO_BINDTODEVICE, string(ifName))
+			})
+			if err != nil {
+				return err
+			}
+			return opErr
+		}
+	}
+
+	// 2. Создаём Transport
+	transport := &http.Transport{
+		DialContext:           dialer.DialContext,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		// можно ещё настроить MaxIdleConns, MaxConnsPerHost и т.д.
+	}
+
+	// 3. Создаём http.Client
+	customClient := &http.Client{
+		Transport: transport,
+		Timeout:   60 * time.Second, // общий таймаут запроса
+	}
+
+	// 4. Передаём кастомный клиент в telego
+	bot, err := telego.NewBot(
+		config.TgBot.Token,
+		telego.WithHTTPClient(customClient), // ← вот здесь главное
+		telego.WithDiscardLogger(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return bot, nil
+}
+
 // --- Запуск Telegram-бота ---
 func RunTgBot(ctx context.Context, config *conf.Config, xrayClient, benchmarkClient *grpcClient.GRpcClient) {
-	bot, err := telego.NewBot(config.TgBot.Token, telego.WithDiscardLogger())
+
+	//const vpnInterface = "wlan0"                // ← поменяй на свой
+	var vpnInterface = config.TgBot.Interface // ← поменяй на свой
+
+	bot, err := createBotWithInterface(config, vpnInterface)
 	if err != nil {
 		log.Fatalf("Ошибка создания бота: %v", err)
 	}

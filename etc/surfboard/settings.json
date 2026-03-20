@@ -89,7 +89,8 @@
         [
             1111111,
             2222222
-        ]
+        ],
+        "interface" : "opkgtun0"
     },
     "github":
     {
